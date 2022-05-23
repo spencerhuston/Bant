@@ -57,13 +57,21 @@
 
 \begin{document}
 
-\paragraph{Primitive Types}
+\paragraph{Delimiters}
 
 \begin{grammar}
 
 <singleQuote> ::= '
 
 <doubleQuote> ::= ''
+
+<terminator> ::= `;' | `\\n'
+
+\end{grammar}
+
+\paragraph{Primitive Types}
+
+\begin{grammar}
 
 <int> ::= [ integer ]
 
@@ -121,7 +129,9 @@
 
 <templateTypes> ::= `['<type>`:>'<ident>[`,' <type>`:>'<ident>]*`]'
 
-<prog> ::= [`fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp>`;']*
+<funDef> ::= `fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp><terminator>
+
+<prog> ::= [<funDef>]*
 
 <app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
 
@@ -163,10 +173,9 @@
 \alt <prog>
 \alt <arg> `=>' <smp>
 
-<exp> ::= <smp>[`;' <exp>]
-\alt `val' <ident>[`:'<type>] `=' <smp>`;' <exp>
-
-<inc> ::= `include' <file>
+<exp> ::= <smp>[<terminator><exp>]
+\alt `val' <ident>[`:'<type>] `=' <smp><terminator><exp>
+\alt `include' <file><terminator><exp>
 
 \end{grammar}
 
