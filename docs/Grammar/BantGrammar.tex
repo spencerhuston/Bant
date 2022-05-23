@@ -87,6 +87,20 @@
 
 \end{grammar}
 
+\paragraph{Types}
+
+\begin{grammar}
+
+<type> ::= `int' | `bool' | `char' | `string' | `null'
+\alt <type> `->' <type>
+\alt `('[<type>[`,' <type>]*]`)' `->' `('[<type>[`,' <type>]*]`)'
+\alt `List' | `Array' `['<type>`]'
+\alt `Tuple' `['<type>[`,' <type>]*`]'
+\alt `Dict' `['<type>`,' <type>`]'
+\alt <ident>
+
+\end{grammar}
+
 \paragraph{Arithmetic and Boolean Operators}
 
 \begin{grammar}
@@ -105,7 +119,21 @@
 
 <arg> ::= <ident>`:'<type>[`='<atom>]
 
-<prog> ::= [`fn' <ident>[`['<type>[`,' <type>]*`]']`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp>`;']*
+<templateTypes> ::= `['<type>`:>'<ident>[`,' <type>`:>'<ident>]*`]'
+
+<prog> ::= [`fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp>`;']*
+
+\end{grammar}
+
+\paragraph{Pattern Matching and Switches}
+
+\begin{grammar}
+
+<match> ::= `match' `('<ident>`)' `\{'`case' <type>`=>' <smp>[`,' `case' <type> `=>' <smp>]*`\}'
+
+<switch> ::= `switch' `('<atom>`)' `\{'`case' <atom>`=>' <smp>[`,' `case' <atom> `=>' <smp>]*`\}'
+
+<matchSwitch> ::= <match> | <switch>
 
 \end{grammar}
 
