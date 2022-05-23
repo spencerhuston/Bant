@@ -44,3 +44,5 @@ bin/
 #general
 *.class
 *.log
+docs/Grammar/BantGrammar.synctex.gz
+docs/Grammar/BantGrammar.aux
