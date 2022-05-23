@@ -1,18 +1,18 @@
 package BantRunner
 
 import scala.sys.exit
-import scala.io.Source
 import scopt.OParser
 
+import scala.io.Source
 import java.io.FileNotFoundException
 
 object Main {
   case class ParserConfig(
                            filepath: String = "",
-                     debug: Boolean = false
-                   )
+                           debug: Boolean = false
+                         )
 
-  def main(args: Array[String]) = {
+  def parseCmdLine(args: Array[String]) = {
     val builder = OParser.builder[ParserConfig]
     val cmdLineParser = {
       import builder._
@@ -30,19 +30,30 @@ object Main {
       )
     }
 
-    OParser.parse(cmdLineParser, args, ParserConfig()) match {
-      case Some(config) =>
-        if (config.filepath.takeRight(4) != ".bnt") {
-          println("Error: Bant file requires .bnt extension") // add red text for logging
-          exit(2)
-        }
+    OParser.parse(cmdLineParser, args, ParserConfig())
+  }
 
-        try {
-          val bantProgramSource = Source.fromFile(config.filepath).getLines.toList
-          println(bantProgramSource)
-        } catch {
-          case f: FileNotFoundException => println(s"Error: Could not find Bant source file ${config.filepath}")
-            exit(3)
+  def readBantSource(filepath: String): Option[String] = {
+    if (filepath.takeRight(4) != ".bnt") {
+      println("Error: Bant file requires .bnt extension") // add red text for logging
+      return None
+    }
+
+    try {
+      Some(Source.fromFile(filepath).mkString)
+    } catch {
+      case f: FileNotFoundException => println(s"Error: Could not find Bant source file ${filepath}")
+        None
+    }
+  }
+
+  def main(args: Array[String]) = {
+    args.foreach { println(_) }
+    parseCmdLine(args) match {
+      case Some(config) =>
+        readBantSource(config.filepath) match {
+          case Some(bantSource) => println(bantSource)
+          case _ => exit(1)
         }
       case _ =>
         exit(1)
