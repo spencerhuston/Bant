@@ -103,7 +103,28 @@
 
 \begin{grammar}
 
+<arg> ::= <ident>`:'<type>[`='<atom>]
+
 <prog> ::= [`fn' <ident>[`['<type>[`,' <type>]*`]']`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp>`;']*
+
+\end{grammar}
+
+\paragraph{Expressions}
+
+\begin{grammar}
+
+<smp> ::= <utight>[<op><utight>]
+\alt `if' `('<smp>`)' <smp> [`else' <smp>]
+\alt `List' | `Tuple' | `Array' `\{'[<smp>[`,' <smp>]*]`\}'
+\alt `Dict' `\{'[<smp>`:'<smp>[`,' <smp>`:'<smp>]*]`\}'
+\alt <matchSwitch>
+\alt <trait>
+\alt <adt>
+\alt <prog>
+\alt <arg> `=>' <smp>
+
+<exp> ::= <smp>[`;' <exp>]
+\alt `val' <ident>[`:'<type>] `=' <smp>`;' <exp>
 
 \end{grammar}
 
