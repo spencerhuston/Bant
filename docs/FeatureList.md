@@ -27,7 +27,6 @@
 ### Other
 * Implicit tail recursion via CPS phase
 * Parametric polymorphism via function templates
-* Wildcard parameters
 * Default parameter values
 * Function chaining with the bird `|>` operator
 * Anonymous lambdas

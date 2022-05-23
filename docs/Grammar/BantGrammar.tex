@@ -61,13 +61,6 @@
 
 \begin{grammar}
 
-<statement> ::= <ident> `=' <expr> 
-\alt `for' <ident> `=' <expr> `to' <expr> `do' <statement> 
-\alt `{' <stat-list> `}' 
-\alt <empty> 
-
-<stat-list> ::= <statement> `;' <stat-list> | <statement> 
-
 <singleQuote> ::= '
 
 <doubleQuote> ::= ''
@@ -84,6 +77,16 @@
 
 \end{grammar}
 
+\paragraph{Algebraic Data Types and Type-Traits}
+
+\begin{grammar}
+
+<adt> ::= `type' <ident> `\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
+
+<trait> ::= `trait' `\{'<type>[`,' <type>]*`\}'
+
+\end{grammar}
+
 \paragraph{Arithmetic and Boolean Operators}
 
 \begin{grammar}
@@ -96,5 +99,12 @@
 
 \end{grammar}
 
+\paragraph{Functions}
+
+\begin{grammar}
+
+<prog> ::= [`fn' <ident>[`['<type>[`,' <type>]*`]']`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp>`;']*
+
+\end{grammar}
 
 \end{document}
