@@ -123,6 +123,8 @@
 
 <prog> ::= [`fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp>`;']*
 
+<app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
+
 \end{grammar}
 
 \paragraph{Pattern Matching and Switches}
@@ -141,6 +143,16 @@
 
 \begin{grammar}
 
+<atom> ::= <int> | <bool> | <char> | <string> | <null>
+\alt `('<smp>`)'
+\alt <ident>[`.'<ident>]*
+
+<tight> ::= <app>[`:>'<app>]
+\alt [`('<smp>`)']+
+\alt '\{'<exp>`\}'
+
+<utight> ::= [<op>]<tight>
+
 <smp> ::= <utight>[<op><utight>]
 \alt `if' `('<smp>`)' <smp> [`else' <smp>]
 \alt `List' | `Tuple' | `Array' `\{'[<smp>[`,' <smp>]*]`\}'
@@ -153,6 +165,8 @@
 
 <exp> ::= <smp>[`;' <exp>]
 \alt `val' <ident>[`:'<type>] `=' <smp>`;' <exp>
+
+<inc> ::= `include' <file>
 
 \end{grammar}
 
