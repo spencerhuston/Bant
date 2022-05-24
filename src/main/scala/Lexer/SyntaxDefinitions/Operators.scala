@@ -20,5 +20,5 @@ object Operators extends Enumeration {
   val OR = Value("||")
 
   val booleanOperators = List(LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
-    NOT, NOT_EQUAL, EQUAL, AND, OR)
+                              NOT, NOT_EQUAL, EQUAL, AND, OR)
 }

@@ -1,7 +1,9 @@
 package Lexer
 
-import Position.{curr, hasNext, inQuotes, newline, peek}
-import SyntaxDefinitions.{RawDelimiters, Delimiters, Operators, Keywords}
+import Position._
+import SyntaxDefinitions._
+
+import scala.annotation.tailrec
 
 object Lexer {
   var position = Position
@@ -17,22 +19,39 @@ object Lexer {
 
   def isDelimiter: Boolean = (Delimiters.values.toList ++ Operators.values.toList).contains(curr)
 
-  def isKeyword: Boolean = ???
+  def isKeyword: Boolean = Keywords.values.toList.contains(curr)
 
   def isNumValue: Boolean = ???
 
   def isIdent: Boolean = ???
 
-  def scanHelper() = {
+  @tailrec
+  def scanHelper(): Unit = {
     if (hasNext) {
-      if (isComment) ???
-      else if (isTerminator) ???
-      else if (isWhitespace) ???
-      else if (isDelimiter) ???
-      else if (isKeyword) ???
-      else if (isNumValue) ???
-      else if (isIdent) ???
+      if (isValidCharacter) {
+        if (isComment) skipLine()
+        else if (isTerminator) {
+          tokenStream = tokenStream :+ Terminator(filePositionFactory, "terminator_token_text")
+          newline()
+        }
+        else if (isWhitespace) advanceChar()
+        else if (isRawDelimiter)
+          ??? // split into tokens from possible combo of delim, ident, keyword, value, etc.
+        else if (isKeyword) {
+          tokenStream = tokenStream :+ Keyword(filePositionFactory, "keyword_token_text")
+          ??? // advance past keyword
+        }
+        else if (isNumValue) ???
+        else if (isIdent) ???
+
+        scanHelper()
+      }
+      else
+        // invalid character
+        println(s"Invalid character: $curr")
     }
+    else
+      tokenStream = tokenStream :+ EOF(filePositionFactory, "EOF")
   }
 
   def scan(sourceString: String) = {

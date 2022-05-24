@@ -6,6 +6,7 @@ object Delimiters extends Enumeration {
   val STRING_QUOTE = Value("\"")
   val CHAR_QUOTE = Value("\'")
   val COMMA = Value(",")
+  val ACCESS = Value(".")
   val LEFT_PAREN = Value("(")
   val RIGHT_PAREN = Value(")")
   val LEFT_BRACKET = Value("[")

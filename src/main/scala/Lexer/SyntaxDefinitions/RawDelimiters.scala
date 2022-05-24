@@ -14,6 +14,7 @@ object RawDelimiters extends Enumeration {
   val DOUBLE_QUOTE = Value("\"")
   val SINGLE_QUOTE = Value("\'")
   val COMMA = Value(",")
+  val PERIOD = Value(".")
   val LEFT_PAREN = Value("(")
   val RIGHT_PAREN = Value(")")
   val LEFT_BRACKET = Value("[")
