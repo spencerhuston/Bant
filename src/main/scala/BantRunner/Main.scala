@@ -2,7 +2,7 @@ package BantRunner
 
 import BantRunner.CmdLineParser.parseCmdLine
 import BantRunner.FileReader.readBantSource
-import Lexer.Lexer.makeTokenStream
+import Lexer.Lexer.scan
 
 object Main {
   def getSource(args: Array[String]): Option[String] = {
@@ -20,7 +20,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     getSource(args) match {
       case Some(bantSource) =>
-        makeTokenStream(bantSource)
+        scan(bantSource)
       case _ => ()
     }
   }
