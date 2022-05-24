@@ -90,8 +90,10 @@
 \begin{grammar}
 
 <adt> ::= `type' <ident> [`:' <ident>]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
+ 
+<typeclass> ::= `typeclass' <ident> `\{'<prog>`\}'
 
-<trait> ::= `trait' `\{'<type>[`,' <type>]*`\}'
+<instance> ::= `instance' <ident>`:'<ident>`\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'
 
 \end{grammar}
 
@@ -102,10 +104,10 @@
 <type> ::= `int' | `bool' | `char' | `string' | `null'
 \alt <type> `->' <type>
 \alt `('[<type>[`,' <type>]*]`)' `->' `('[<type>[`,' <type>]*]`)'
-\alt `List' | `Array' `['<type>`]'
+\alt `List' | `Array' | `Set' `['<type>`]'
 \alt `Tuple' `['<type>[`,' <type>]*`]'
 \alt `Dict' `['<type>`,' <type>`]'
-\alt <ident>
+\alt <ident>[`['<type>`]']
 
 \end{grammar}
 
@@ -127,13 +129,19 @@
 
 <arg> ::= <ident>`:'<type>[`='<atom>]
 
-<templateTypes> ::= `['<type>`:>'<ident>[`,' <type>`:>'<ident>]*`]'
+<boundOp> ::= `:>' | `<:'
+
+<boundList> ::= `\{'<ident>[`,'<ident>]*`\}'
+
+<templateTypes> ::= `['<type>[<boundOp><boundList>][`,' <type>[<boundOp><boundList>]]*`]'
 
 <funDef> ::= `fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp><terminator>
 
 <prog> ::= [<funDef>]*
 
 <app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
+
+<anonLmbd> ::= <arg> `=>' <smp>
 
 \end{grammar}
 
@@ -165,16 +173,17 @@
 
 <smp> ::= <utight>[<op><utight>]
 \alt `if' `('<smp>`)' <smp> [`else' <smp>]
-\alt `List' | `Tuple' | `Array' `\{'[<smp>[`,' <smp>]*]`\}'
+\alt `List' | `Tuple' | `Array' | `Set' `\{'[<smp>[`,' <smp>]*]`\}'
 \alt `Dict' `\{'[<smp>`:'<smp>[`,' <smp>`:'<smp>]*]`\}'
 \alt <matchSwitch>
-\alt <trait>
+\alt <typeclass>
+\alt <instance>
 \alt <adt>
 \alt <prog>
-\alt <arg> `=>' <smp>
+\alt <anonLmbd>
 
 <exp> ::= <smp>[<terminator><exp>]
-\alt `val' <ident>[`:'<type>] `=' <smp><terminator><exp>
+\alt [`lazy'] `val' <ident>[`:'<type>] `=' <smp><terminator><exp>
 \alt `include' <file><terminator><exp>
 
 \end{grammar}
