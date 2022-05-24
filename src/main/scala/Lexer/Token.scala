@@ -22,3 +22,6 @@ case class Value(
 case class Ident(
   val fp: FilePosition,
   val tokenText: String) extends Token
+case class EOF(
+  val fp: FilePosition,
+  val tokenText: String) extends Token

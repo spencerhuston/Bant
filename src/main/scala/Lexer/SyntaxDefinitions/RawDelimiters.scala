@@ -1,0 +1,26 @@
+package Lexer.SyntaxDefinitions
+
+object RawDelimiters extends Enumeration {
+  val PLUS = Value("+")
+  val HYPHEN = Value("-")
+  val STAR = Value("*")
+  val FORWARD_SLASH = Value("/")
+  val PERCENT = Value("%")
+  val LEFT_ARROW = Value("<")
+  val RIGHT_ARROW = Value(">")
+  val EQUALS = Value("=")
+  val COLON = Value(":")
+  val SEMI_COLON = Value(";")
+  val DOUBLE_QUOTE = Value("\"")
+  val SINGLE_QUOTE = Value("\'")
+  val COMMA = Value(",")
+  val LEFT_PAREN = Value("(")
+  val RIGHT_PAREN = Value(")")
+  val LEFT_BRACKET = Value("[")
+  val RIGHT_BRACKET = Value("]")
+  val LEFT_BRACE = Value("{")
+  val RIGHT_BRACE = Value("}")
+  val AMPERSAND = Value("&")
+  val PIPE = Value("|")
+  val EXCLAMATION = Value("!")
+}

@@ -1,4 +1,4 @@
-package Lexer
+package Lexer.SyntaxDefinitions
 
 object Operators extends Enumeration {
   val PLUS = Value("+")
@@ -10,7 +10,7 @@ object Operators extends Enumeration {
   val arithmeticOperators = List(PLUS, MINUS, MULTIPLY, DIVIDE)
 
   val LESS_THAN = Value("<")
-  val GREATER_THAN = Value (">")
+  val GREATER_THAN = Value(">")
   val LESS_THAN_OR_EQUAL = Value("<=")
   val GREATER_THAN_OR_EQUAL = Value(">=")
   val NOT = Value("!")
@@ -20,7 +20,5 @@ object Operators extends Enumeration {
   val OR = Value("||")
 
   val booleanOperators = List(LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
-                              NOT, NOT_EQUAL, EQUAL, AND, OR)
-
-  val operators = arithmeticOperators ++ booleanOperators
+    NOT, NOT_EQUAL, EQUAL, AND, OR)
 }

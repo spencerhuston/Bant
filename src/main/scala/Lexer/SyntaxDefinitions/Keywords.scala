@@ -1,0 +1,25 @@
+package Lexer.SyntaxDefinitions
+
+object Keywords extends Enumeration {
+  val TRUE = Value("true")
+  val FALSE = Value("false")
+  val NULL = Value("null")
+  val TYPE = Value("type")
+  val TRAIT = Value("trait")
+  val INT = Value("int")
+  val BOOL = Value("bool")
+  val CHAR = Value("char")
+  val STRING = Value("string")
+  val LIST = Value("List")
+  val ARRAY = Value("Array")
+  val TUPLE = Value("Tuple")
+  val DICT = Value("Dict")
+  val FN = Value("fn")
+  val MATCH = Value("match")
+  val SWITCH = Value("switch")
+  val CASE = Value("case")
+  val IF = Value("if")
+  val ELSE = Value("else")
+  val VAL = Value("val")
+  val INCLUDE = Value("include")
+}

@@ -1,6 +1,7 @@
 package Lexer
 
-import Position.{inQuotes, hasNext, curr, peek, newline}
+import Position.{curr, hasNext, inQuotes, newline, peek}
+import SyntaxDefinitions.{RawDelimiters, Delimiters, Operators, Keywords}
 
 object Lexer {
   var position = Position
@@ -8,17 +9,19 @@ object Lexer {
 
   def isComment: Boolean = !inQuotes && curr == '#'
 
-  def isTerminator = ???
+  def isTerminator: Boolean = curr == ';' || curr == '\n'
 
   def isWhitespace: Boolean = curr == ' ' || curr == '\t'
 
-  def isDelimiter = Operators.arithmeticOperators.contains(curr)
+  def isRawDelimiter: Boolean = RawDelimiters.values.toList.contains(curr)
 
-  def isKeyword = ???
+  def isDelimiter: Boolean = (Delimiters.values.toList ++ Operators.values.toList).contains(curr)
 
-  def isValue = ???
+  def isKeyword: Boolean = ???
 
-  def isIdent = ???
+  def isNumValue: Boolean = ???
+
+  def isIdent: Boolean = ???
 
   def scanHelper() = {
     if (hasNext) {
@@ -27,7 +30,7 @@ object Lexer {
       else if (isWhitespace) ???
       else if (isDelimiter) ???
       else if (isKeyword) ???
-      else if (isValue) ???
+      else if (isNumValue) ???
       else if (isIdent) ???
     }
   }
