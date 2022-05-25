@@ -1,2 +1,4 @@
+[![Build](https://github.com/spencerhuston/Bant/actions/workflows/scala.yml/badge.svg)](https://github.com/spencerhuston/Bant/actions/workflows/scala.yml)
+
 # BantV2
-Revitalized version of the Bant programming language, built again from the ground up with new features and in a language other than C++.
+Work-in-progess statically-typed, functional programming language made using Scala
