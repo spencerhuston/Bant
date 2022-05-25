@@ -15,12 +15,12 @@ case class Terminator(
   fp: FilePosition = filePositionFactory) extends Token
 case class Delimiter(
   delim: Delimiters.Value,
-   tokenText: String,
-   fp: FilePosition = filePositionFactory) extends Token
+  tokenText: String,
+  fp: FilePosition = filePositionFactory) extends Token
 case class Keyword(
-   keyword: Keywords.Value,
-   tokenText: String,
-   fp: FilePosition = filePositionFactory) extends Token
+  keyword: Keywords.Value,
+  tokenText: String,
+  fp: FilePosition = filePositionFactory) extends Token
 case class Value(
    tokenText: String,
    fp: FilePosition = filePositionFactory) extends Token
