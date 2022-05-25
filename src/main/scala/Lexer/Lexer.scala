@@ -116,8 +116,9 @@ object Lexer {
     } else {
       if (isKeyword(term))
         Keywords.getValue(term) match { case Some(keywordValue) => addToken(Keyword(keywordValue, term)) }
-      else if (isIdent(term))
+      else if (isIdent(term)) {
         addToken(Ident(term))
+      }
     }
   }
 
