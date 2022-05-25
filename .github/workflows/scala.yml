@@ -1,10 +1,14 @@
-name: Scala CI
+name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - dev
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - dev
+      - main
 
 permissions:
   contents: read
@@ -22,4 +26,10 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
     - name: Run tests
-      run: sbt test
+      run: sbt coverage test
+    - name: Coverage Report
+      run: sbt coverageReport
+    - name: "Upload coverage to Codecov"
+      uses: "codecov/codecov-action@v3"
+      with:
+          fail_ci_if_error: true
