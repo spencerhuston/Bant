@@ -7,7 +7,7 @@ object Operators extends Enumeration {
   val DIVIDE = Value("/")
   val MODULUS = Value("%")
 
-  val arithmeticOperators = List(PLUS, MINUS, MULTIPLY, DIVIDE)
+  val arithmeticOperators: List[Operators.Value] = List(PLUS, MINUS, MULTIPLY, DIVIDE)
 
   val LESS_THAN = Value("<")
   val GREATER_THAN = Value(">")
@@ -19,6 +19,6 @@ object Operators extends Enumeration {
   val AND = Value("&&")
   val OR = Value("||")
 
-  val booleanOperators = List(LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
-                              NOT, NOT_EQUAL, EQUAL, AND, OR)
+  val booleanOperators: List[Operators.Value] = List(LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
+                          NOT, NOT_EQUAL, EQUAL, AND, OR)
 }

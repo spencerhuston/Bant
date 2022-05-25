@@ -1,5 +1,7 @@
 package Lexer
 
+import Position.filePositionFactory
+
 case class FilePosition(line: Int, column: Int, lineText: String)
 
 sealed trait Token {
@@ -8,20 +10,20 @@ sealed trait Token {
 }
 
 case class Terminator(
-  val fp: FilePosition,
-  val tokenText: String) extends Token
+  val tokenText: String,
+  val fp: FilePosition = filePositionFactory) extends Token
 case class Delimiter(
-  val fp: FilePosition,
-  val tokenText: String) extends Token
+  val tokenText: String,
+  val fp: FilePosition = filePositionFactory) extends Token
 case class Keyword(
-  val fp: FilePosition,
-  val tokenText: String) extends Token
+  val tokenText: String,
+  val fp: FilePosition = filePositionFactory) extends Token
 case class Value(
-  val fp: FilePosition,
-  val tokenText: String) extends Token
+  val tokenText: String,
+  val fp: FilePosition = filePositionFactory) extends Token
 case class Ident(
-  val fp: FilePosition,
-  val tokenText: String) extends Token
+  val tokenText: String,
+  val fp: FilePosition = filePositionFactory) extends Token
 case class EOF(
-  val fp: FilePosition,
-  val tokenText: String) extends Token
+  val tokenText: String = "EOF",
+  val fp: FilePosition = filePositionFactory) extends Token
