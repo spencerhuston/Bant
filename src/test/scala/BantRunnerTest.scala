@@ -1,7 +1,8 @@
+import org.scalatest.flatspec.AnyFlatSpec
+
 import BantRunner.CmdLineParser.parseCmdLine
 import BantRunner.FileReader.readBantSource
 import BantRunner.Main
-import org.scalatest.flatspec.AnyFlatSpec
 
 class BantRunnerTest extends AnyFlatSpec {
   "CmdLineParser.parseCmdLine" must "fail if Bant source file does not exist" in {
@@ -69,15 +70,27 @@ class BantRunnerTest extends AnyFlatSpec {
         |print(x)""".stripMargin)
   }
 
-  "Main.main" should "print the source for a valid file" in {
-    assert(Main.main(Array("-f", "src/test/testPrograms/test.bnt")) == ())
+  "Main.getSource" should "print the source for a valid file" in {
+    assert(Main.getSource(Array("-f", "src/test/testPrograms/test.bnt")).isDefined)
   }
 
   it should "fail on bad command line args" in {
-    assert(Main.main(Array("-f", "-d", "src/test/testPrograms/test.bnt")) == None)
+    assert(Main.getSource(Array("-f", "-d", "src/test/testPrograms/test.bnt")).isEmpty)
   }
 
   it should "fail on a bad source file" in {
-    assert(Main.main(Array("-f", "test.bnt")) == None)
+    assert(Main.getSource(Array("-f", "test.bnt")).isEmpty)
+  }
+
+  "Main.run" should "run with valid args and file" in {
+    assert(Main.run(Array("-f", "src/test/testPrograms/test.bnt")))
+  }
+
+  it should "not run with bad args and file" in {
+    assert(!Main.run(Array("-f", "-d", "src/test/testPrograms/test.bnt")))
+  }
+
+  "Main.main" should "run with valid args and file" in {
+    assert(Main.main(Array("-f", "src/test/testPrograms/test.bnt")) == ())
   }
 }

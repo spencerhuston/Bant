@@ -1,0 +1,31 @@
+type Residence { bed: int, bath: int }
+type House : Residence {  }
+type Apartment : Residence { }
+type Condo : Residence { }
+
+typeclass ResidenceMethods {
+    printDimensions = () -> null
+}
+
+instance Residence : ResidenceMethods {
+    fn printDimensions() -> null = {
+        println(this.bed)
+        println(this.bath)
+    }
+}
+
+val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }
+
+foreach[Residence](residences, (r: Residence) => r.printDimensions())
+
+val house = House(3, 2)
+
+val optHouse: Option[House] = house match {
+    case House(bed, bath) => Some(House(bed, bath))
+    case _ => None
+}
+
+println(optHouse match {
+    case Some(tmpHouse) => tmpHouse.printDimensions()
+    case _ => println("No house")
+})

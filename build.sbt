@@ -7,7 +7,9 @@ libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.1"
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.11"
 
+enablePlugins(JavaAppPackaging, ScoverageSbtPlugin)
+
 lazy val root = (project in file("."))
   .settings(
-    name := "BantV2"
+    name := "Bant"
   )

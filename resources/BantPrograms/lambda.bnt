@@ -1,0 +1,2 @@
+val double = (x: int) => x * 2
+println(map(List {1,2,3}, double))

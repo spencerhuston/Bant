@@ -1,0 +1,70 @@
+- Remove traits, now typeclasses
+Typeclass syntax:
+typeclass <ident> {
+    <ident>[, <ident>] = <type>[,
+    <ident>[, <ident>] = <type>
+    ]*
+}
+
+Typeclass instance syntax:
+instance <ident> : <ident> {
+    <prog>
+}
+
+- An adt in a typeclass MUST have implementations of the listed functions with the types defined
+- Only 1 typeclass per adt
+- Overloads on derived adt's are implicit and optional
+- :> and <: for bounded types only
+- Sets in Collection Types
+- Lazy Evaluation (need to figure out lazy parameters)
+- Polymorhpic parameter as a part of type syntax
+- Polymorphic inference, ex: print[int](5) to print(5). [] is omitted due to inference of parameter type
+
+type Node[T] { data: T, left: Node[T]
+
+Example:
+type Vehicle { wheels: int, year: int }
+
+typeclass VehicleMethods {
+    getWheels = () -> int,
+    getYear = () -> int
+}
+
+instance Vehicle : VehiclesMethods = {
+    fn getWheels() -> int = this.wheels
+    fn getYear() -> int = this.year
+}
+
+# automatically inherits wheels, year, getWheels, and getYear
+type Car : Vehicle { }
+
+# overloaded methods
+instance Car : VehiclesMethods = {
+    fn getWheels() -> int = 4
+    fn getYear() -> int = 2022
+}
+
+type Semi : Vehicle { }
+
+val v: Vehicle = Car(4, 2020)
+val v2: Vehicle = Semi(14, 2015)
+
+println(v.getYear()) # 2022 - uses overloaded typeclass method to get literal value '2022' instead of this.wheels
+println(v2.getYear()) # 2015 - uses typeclass method from Vehicle super-type
+
+type Bike { wheels: int }
+
+# Bounding polymorhpic type T to Vehicle subclasses
+fn printWheels[T :> Vehicle](v: T) -> null = {
+    println(v.wheels)
+}
+
+fn makeCar() -> Car = Car(4, 2012)
+
+# bird operator for function chaining
+makeCar() |> printWheels[Car]()
+
+# Bounded type-list
+fn collHead[T :> { List, Array, Tuple, Set }, U](coll: T[U]) -> U = {
+    coll.head()
+}
