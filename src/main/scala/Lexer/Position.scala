@@ -15,7 +15,7 @@ object Position {
   def next: Char = source(index + 1)
   def peek(): Option[Char] = if (index + 1 != source.length) Some(next) else None
 
-  def advanceChar(whitespace: Boolean = true): Unit = {
+  def advanceChar(): Unit = {
     curr match {
       case ' ' =>
         lineText += " "

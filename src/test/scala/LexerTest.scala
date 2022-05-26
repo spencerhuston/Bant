@@ -1,5 +1,4 @@
 import org.scalatest.flatspec.AnyFlatSpec
-
 import BantRunner.Main
 import Lexer.{Lexer, Position, SyntaxDefinitions, Token}
 import SyntaxDefinitions.{Delimiters, Keywords, RawDelimiters}
@@ -187,19 +186,186 @@ class LexerTest extends AnyFlatSpec {
     assert(Lexer.tokenStream.isEmpty)
   }
 
-  //"Lexer.handleNumValue"
+  "Lexer.handleNumValue" should "add to tokenStream numeric value exists" in {
+    Lexer.clear()
+    Lexer.position.source = "12345"
+    Lexer.handleNumValue()
+    assert(Lexer.tokenStream.size == 1)
+  }
+
+  it should "not add to tokenStream if no numeric value exists" in {
+    Lexer.clear()
+    Lexer.position.source = "test"
+    Lexer.handleNumValue()
+    assert(Lexer.tokenStream.isEmpty)
+  }
+
   //"Lexer.handleTerm"
   //"Lexer.scanHelper"
   //"Lexer.scan"
-  //"Lexer.clear"
+  
+  "Lexer.clear" should "clear all Lexer & Position vars" in {
+    Lexer.clear()
+    Lexer.scan("test\ntest2")
 
-  //"Position.hasNext"
-  //"Position.curr"
-  //"Position.next"
+    Lexer.clear()
+
+    assert(Lexer.position.index == 0 &&
+      Lexer.position.lineNumber == 0 &&
+      Lexer.position.columnNumber == 0 &&
+      Lexer.position.lineText == "" &&
+      !Lexer.position.inQuotes &&
+      Lexer.position.source == "" &&
+      Lexer.position.lineList.isEmpty &&
+      Lexer.tokenStream.isEmpty)
+  }
+
+  "Position.hasNext" should "return false if curr is not last value" in {
+    Lexer.clear()
+    Lexer.position.source = "cd"
+    assert(Lexer.position.hasNext)
+  }
+
+  it should "return true if curr is last value" in {
+    Lexer.clear()
+    Lexer.position.source = "c"
+    assert(Lexer.position.hasNext)
+  }
+
+  "Position.curr" should "give the character at the index of the source string" in {
+    Lexer.clear()
+    Lexer.position.source = "test"
+    Lexer.position.index = 1
+    assert(Lexer.position.curr == 'e')
+  }
+
+  "Position.next" should "give the next character to the index of the source string" in {
+    Lexer.clear()
+    Lexer.position.source = "test"
+    Lexer.position.index = 1
+    assert(Lexer.position.next == 's')
+  }
+
   //"Position.peek"
-  //"Position.advanceChar"
-  //"Position.resetLine"
-  //"Position.newLine"
-  //"Position.filePositionFactory"
-  //"Position.clear"
+
+  "Position.advanceChar" should "increment column, index, and append to lineText if space char" in {
+    Lexer.clear()
+    Lexer.position.index = 4
+    Lexer.position.columnNumber = 4
+    Lexer.position.lineText = "test"
+    Lexer.position.source = "test test2"
+
+    Lexer.position.advanceChar()
+
+    assert(Lexer.position.index == 5 &&
+      Lexer.position.columnNumber == 5 &&
+      Lexer.position.lineText == "test ")
+  }
+
+  it should "increment column, index, and append to lineText if tab char" in {
+    Lexer.clear()
+    Lexer.position.index = 4
+    Lexer.position.columnNumber = 4
+    Lexer.position.lineText = "test"
+    Lexer.position.source = "test\ttest2"
+
+    Lexer.position.advanceChar()
+
+    assert(Lexer.position.index == 8 &&
+      Lexer.position.columnNumber == 8 &&
+      Lexer.position.lineText == "test\t")
+  }
+
+  it should "increment column, index, and append to lineText if regular char" in {
+    Lexer.clear()
+    Lexer.position.index = 2
+    Lexer.position.columnNumber = 2
+    Lexer.position.lineText = "te"
+    Lexer.position.source = "test test2"
+
+    Lexer.position.advanceChar()
+
+    assert(Lexer.position.index == 3 &&
+      Lexer.position.columnNumber == 3 &&
+      Lexer.position.lineText == "tes")
+  }
+
+  "Position.resetLine" should "reset the Position vars for a new line" in {
+    Lexer.clear()
+    Lexer.position.lineNumber = 2
+    Lexer.position.columnNumber = 4
+    Lexer.position.lineText = "test"
+
+    Lexer.position.resetLine()
+
+    assert(Lexer.position.lineNumber == 3 &&
+      Lexer.position.columnNumber == 0 &&
+      Lexer.position.lineText == "")
+  }
+
+  "Position.newLine" should "reset the Position vars on newline char, index += 1" in {
+    Lexer.clear()
+    Lexer.position.index = 4
+    Lexer.position.lineNumber = 2
+    Lexer.position.columnNumber = 4
+    Lexer.position.lineText = "test\ntest2"
+    Lexer.position.source = "test\ntest2"
+
+    println(Lexer.position.curr)
+
+    Lexer.position.newline()
+
+    assert(Lexer.position.index == 5 &&
+      Lexer.position.lineNumber == 3 &&
+      Lexer.position.columnNumber == 0 &&
+      Lexer.position.lineText == "")
+  }
+
+  it should "reset the Position vars on semicolon char, index += 2" in {
+    Lexer.clear()
+    Lexer.position.index = 4
+    Lexer.position.lineNumber = 2
+    Lexer.position.columnNumber = 4
+    Lexer.position.lineText = "test;\ntest2"
+    Lexer.position.source = "test;\ntest2"
+
+    println(Lexer.position.curr)
+
+    Lexer.position.newline(true)
+
+    assert(Lexer.position.index == 6 &&
+      Lexer.position.lineNumber == 3 &&
+      Lexer.position.columnNumber == 0 &&
+      Lexer.position.lineText == "")
+  }
+
+  "Position.filePositionFactory" should "create a FilePosition instance" in {
+    Lexer.clear()
+    Lexer.position.lineNumber = 1
+    Lexer.position.columnNumber = 5
+    Lexer.position.source = "test\ntest2"
+    val fp = Lexer.position.filePositionFactory
+    assert(fp.line == 1 && fp.column == 5 && fp.lineText == "test2")
+  }
+
+  "Position.clear" should "clear all Position vars" in {
+    Lexer.clear()
+    Lexer.position.index = 5
+    Lexer.position.lineNumber = 5
+    Lexer.position.columnNumber = 5
+    Lexer.position.lineText = "test"
+    Lexer.position.inQuotes = true
+    Lexer.position.source = "test\ntest2"
+    Lexer.position.lineList = Array("test", "test2")
+
+    Lexer.position.clear()
+
+    assert(Lexer.position.index == 0 &&
+          Lexer.position.lineNumber == 0 &&
+          Lexer.position.columnNumber == 0 &&
+          Lexer.position.lineText == "" &&
+          !Lexer.position.inQuotes &&
+          Lexer.position.source == "" &&
+          Lexer.position.lineList.isEmpty)
+  }
 }
