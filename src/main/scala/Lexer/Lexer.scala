@@ -12,7 +12,6 @@ object Lexer {
 
   def addToken[T <: Token](token: T): Unit = {
     tokenStream += token
-    tokenText = ""
   }
 
   def isValueOf(str: String, enum: Enumeration): Boolean = {
@@ -164,6 +163,7 @@ object Lexer {
 
   def scan(sourceString: String): Unit = {
     position.source = sourceString.replace("\r", "")
+    position.lineList = position.source.split("\n")
     scanHelper()
 
     println("Tokens:")

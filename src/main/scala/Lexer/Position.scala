@@ -1,23 +1,21 @@
 package Lexer
 
-import SyntaxDefinitions.RawDelimiters
-
 object Position {
   var index = 0
   var lineNumber = 0
   var columnNumber = 0
   var lineText = ""
-  var tokenText = ""
   var inQuotes = false
 
   var source: String = ""
+  var lineList: Array[String] = Array[String]()
 
   def hasNext: Boolean = index != source.length
   def curr: Char = source(index)
   def next: Char = source(index + 1)
   def peek(): Option[Char] = if (index + 1 != source.length) Some(next) else None
 
-  def advanceChar(): Unit = {
+  def advanceChar(whitespace: Boolean = true): Unit = {
     curr match {
       case ' ' =>
         lineText += " "
@@ -38,7 +36,6 @@ object Position {
     lineNumber += 1
     columnNumber = 0
     lineText = ""
-    tokenText = ""
   }
 
   def skipLine(): Unit = {
@@ -51,7 +48,7 @@ object Position {
     resetLine()
   }
 
-  def filePositionFactory = {
-    FilePosition(lineNumber, columnNumber, lineText)
+  def filePositionFactory: FilePosition = {
+    FilePosition(lineNumber, columnNumber, lineList(lineNumber))
   }
 }
