@@ -17,9 +17,6 @@ object FileReader {
       case f: FileNotFoundException =>
         println(s"Error: $f")
         None
-      case _ =>
-        println(s"Unknown file exception reading Bant source file $filepath")
-        None
     }
   }
 }

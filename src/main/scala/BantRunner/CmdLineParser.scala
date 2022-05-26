@@ -8,7 +8,7 @@ object CmdLineParser {
                            debug: Boolean = false
                          )
 
-  def parseCmdLine(args: Array[String]) = {
+  def parseCmdLine(args: Array[String]): Option[ParserConfig] = {
     val builder = OParser.builder[ParserConfig]
     val cmdLineParser = {
       import builder._
