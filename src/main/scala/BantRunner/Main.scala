@@ -20,6 +20,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     getSource(args) match {
       case Some(bantSource) =>
+        println(bantSource)
         scan(bantSource)
       case _ => ()
     }

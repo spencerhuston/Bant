@@ -1,2 +1,2 @@
 val x = 5
-println(x)
+print(x)

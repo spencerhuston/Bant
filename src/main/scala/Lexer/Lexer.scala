@@ -25,7 +25,7 @@ object Lexer {
   def isValidCharacter: Boolean = isValueOf(curr.toString, RawDelimiters) ||
                                   Character.isLetterOrDigit(curr) ||
                                   Character.isWhitespace(curr) ||
-                                  curr == '#'
+                                  curr == '#' || curr == '_'
 
   def isComment: Boolean = !inQuotes && curr == '#'
 
@@ -53,15 +53,28 @@ object Lexer {
     }
   }
 
-  def handleQuotes(): Unit = {
-    if (curr == '\'' || curr == '\"') {
-      inQuotes = !inQuotes
-      advanceChar()
-      addToken(Value(tokenText))
-    } else if (inQuotes) {
-      tokenText += curr
-      advanceChar()
+  @tailrec
+  def handleQuotes(str: String = ""): Boolean = {
+    if (hasNext) {
+      if (!inQuotes && (curr == '\'' || curr == '\"')) {
+        inQuotes = true
+        val tmpStr = str + curr.toString
+        advanceChar()
+        handleQuotes(tmpStr)
+      } else if (inQuotes && (curr != '\'' && curr != '\"')) {
+        val tmpStr = str + curr.toString
+        advanceChar()
+        handleQuotes(tmpStr)
+      } else if (inQuotes && (curr == '\'' || curr == '\"')) {
+        addToken(Value(str + curr.toString))
+        inQuotes = false
+        advanceChar()
+
+        hasNext
+      }
+      else true
     }
+    else false
   }
 
   def handleDelimiter(): Unit = {
@@ -80,7 +93,7 @@ object Lexer {
       addDelimToken(curr.toString)
       advanceChar()
     } else if (isDelimiter && nextIsDelimiter) { // could be 2-char delim or 2 separate 1-char delims
-      val twoCharDelim = curr.toString + peek().toString
+      val twoCharDelim = curr.toString + source(index + 1).toString
       if (isValueOf(twoCharDelim, Delimiters)) {
         addDelimToken(twoCharDelim)
         advanceChar()
@@ -109,7 +122,7 @@ object Lexer {
 
   @tailrec
   def handleTerm(term: String = ""): Unit = {
-    if (hasNext && curr.isLetterOrDigit || curr == '_') {
+    if (hasNext && (curr.isLetterOrDigit || curr == '_')) {
       val tmpTerm = term + curr.toString
       advanceChar()
       handleTerm(tmpTerm)
@@ -125,34 +138,34 @@ object Lexer {
   @tailrec
   def scanHelper(): Unit = {
     if (hasNext) {
-      handleQuotes()
-      if (isValidCharacter) {
-        if (isComment)
-          skipLine()
-        else if (isTerminator) {
-          addToken(Terminator(curr.toString))
-          newline(curr == ';')
+      if (handleQuotes()) {
+        if (isValidCharacter) {
+          if (isComment)
+            skipLine()
+          else if (isTerminator) {
+            addToken(Terminator(curr.toString.replace("\n", "\\n")))
+            newline(curr == ';')
+          }
+          else if (isWhitespace) advanceChar()
+          else if (isRawDelimiter) handleDelimiter()
+          else if (isNumValue) handleNumValue()
+          else handleTerm()
         }
-        else if (isWhitespace) advanceChar()
-        else if (isRawDelimiter) handleDelimiter()
-        else if (isNumValue) handleNumValue()
-        else handleTerm()
+        else {
+          println(s"Invalid character: $curr")
+          advanceChar()
+        }
+        scanHelper()
       }
-      else {
-        println(s"Invalid character: $curr")
-        advanceChar()
-      }
-
-      scanHelper()
+      else addToken(EOF())
     }
-    else
-      addToken(EOF())
+    else addToken(EOF())
   }
 
-
   def scan(sourceString: String): Unit = {
-    position.source = sourceString
+    position.source = sourceString.replace("\r", "")
     scanHelper()
+
     println("Tokens:")
     tokenStream.foreach(println(_))
   }

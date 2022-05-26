@@ -11,8 +11,6 @@ object RawDelimiters extends Enumeration {
   val EQUALS = Value("=")
   val COLON = Value(":")
   val SEMI_COLON = Value(";")
-  val DOUBLE_QUOTE = Value("\"")
-  val SINGLE_QUOTE = Value("\'")
   val COMMA = Value(",")
   val PERIOD = Value(".")
   val LEFT_PAREN = Value("(")

@@ -24,8 +24,6 @@ object Delimiters extends Enumeration {
 
   val COLON: Delimiters.Value = Value(":")
   val SEMI_COLON: Delimiters.Value = Value(";")
-  val STRING_QUOTE: Delimiters.Value = Value("\"")
-  val CHAR_QUOTE: Delimiters.Value = Value("\'")
   val COMMA: Delimiters.Value = Value(",")
   val ACCESS: Delimiters.Value = Value(".")
   val LEFT_PAREN: Delimiters.Value = Value("(")
@@ -35,8 +33,10 @@ object Delimiters extends Enumeration {
   val LEFT_BRACE: Delimiters.Value = Value("{")
   val RIGHT_BRACE: Delimiters.Value = Value("}")
   val RETURN_TYPE: Delimiters.Value = Value("->")
+  val CASE_EXP: Delimiters.Value = Value("=>")
   val ASSIGNMENT: Delimiters.Value = Value("=")
-  val COVARIANT: Delimiters.Value = Value(":>")
+  val SUBSET: Delimiters.Value = Value(":>")
+  val SUPERSET: Delimiters.Value = Value("<:")
   val BIRD: Delimiters.Value = Value("|>")
 
   def getValue(str: String): Option[Delimiters.Value] = {
