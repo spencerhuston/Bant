@@ -1,6 +1,6 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import BantRunner.Main
-import Lexer.{Lexer, Position, SyntaxDefinitions, Token}
+import Lexer.{Lexer, SyntaxDefinitions}
 import SyntaxDefinitions.{Delimiters, Keywords, RawDelimiters}
 
 class LexerTest extends AnyFlatSpec {
@@ -136,74 +136,93 @@ class LexerTest extends AnyFlatSpec {
 
   "Lexer.handleQuotes" should "return true if non-quoted char and not last char" in {
     Lexer.clear()
-    Lexer.position.source = "c c"
-    assert(Lexer.handleQuotes())
+    Lexer.scan("c c")
+    assert(Lexer.tokenStream(0).tokenText == "c")
   }
 
   it should "return true if non-quoted char and last char" in {
     Lexer.clear()
-    Lexer.position.source = "c"
-    assert(Lexer.handleQuotes())
+    Lexer.scan("c")
+    assert(Lexer.tokenStream(0).tokenText == "c")
   }
 
   it should "return false if quoted char and last char" in {
     Lexer.clear()
-    Lexer.position.source = "\'c\'"
-    assert(!Lexer.handleQuotes())
+    Lexer.scan("\'c\'")
+    assert(Lexer.tokenStream(0).tokenText == "\'c\'")
   }
 
   it should "return false if quoted string and last char" in {
     Lexer.clear()
-    Lexer.position.source = "\"test\""
-    assert(!Lexer.handleQuotes())
+    Lexer.scan("\"test\"")
+    assert(Lexer.tokenStream(0).tokenText == "\"test\"")
+  }
+
+  it should "return false if quoted string and last char and space" in {
+    Lexer.clear()
+    Lexer.scan("\"test test2\"")
+    assert(Lexer.tokenStream(0).tokenText == "\"test test2\"")
   }
 
   "Lexer.handleDelimiter" should "add to tokenStream if delim exists" in {
     Lexer.clear()
-    Lexer.position.source = "+"
-    Lexer.handleDelimiter()
-    assert(Lexer.tokenStream.size == 1)
+    Lexer.scan("+")
+    assert(Lexer.tokenStream(0).tokenText == "+")
   }
 
   it should "add to tokenStream twice if 2 delims exists" in {
     Lexer.clear()
-    Lexer.position.source = "+-"
-    Lexer.handleDelimiter()
-    assert(Lexer.tokenStream.size == 2)
+    Lexer.scan("+-")
+    assert(Lexer.tokenStream(0).tokenText == "+" &&
+      Lexer.tokenStream(1).tokenText == "-")
   }
 
   it should "add to tokenStream once if 2-char delim exists" in {
     Lexer.clear()
-    Lexer.position.source = ":>"
-    Lexer.handleDelimiter()
-    assert(Lexer.tokenStream.size == 1)
+    Lexer.scan(":>")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == ":>")
   }
 
   it should "not add to tokenStream if no delim exists" in {
     Lexer.clear()
-    Lexer.position.source = "c"
-    Lexer.handleDelimiter()
-    assert(Lexer.tokenStream.isEmpty)
+    Lexer.scan("c")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == "c")
   }
 
   "Lexer.handleNumValue" should "add to tokenStream numeric value exists" in {
     Lexer.clear()
-    Lexer.position.source = "12345"
-    Lexer.handleNumValue()
-    assert(Lexer.tokenStream.size == 1)
+    Lexer.scan("12345")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == "12345")
   }
 
   it should "not add to tokenStream if no numeric value exists" in {
     Lexer.clear()
-    Lexer.position.source = "test"
-    Lexer.handleNumValue()
-    assert(Lexer.tokenStream.isEmpty)
+    Lexer.scan("test")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == "test")
   }
 
-  //"Lexer.handleTerm"
-  //"Lexer.scanHelper"
-  //"Lexer.scan"
-  
+  "Lexer.handleTerm" should "add Keyword or Ident to tokenStream if curr is one" in {
+    Lexer.clear()
+    Lexer.scan("val")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == "val")
+
+    Lexer.clear()
+    Lexer.scan("test")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == "test")
+  }
+
+  "Lexer.scan and Lexer.scanHelper" should "make entire tokenStream" in {
+    Lexer.clear()
+    Lexer.scan("val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }\n\nforeach[Residence](residences, (r: Residence) => r.printDimensions())\n\nval house = House(3, 2)\n\nval optHouse: Option[House] = house match {\n    case House(bed, bath) => Some(House(bed, bath))\n    case _ => None\n}")
+    assert(Lexer.tokenStream.size == 102)
+  }
+
   "Lexer.clear" should "clear all Lexer & Position vars" in {
     Lexer.clear()
     Lexer.scan("test\ntest2")
@@ -246,7 +265,25 @@ class LexerTest extends AnyFlatSpec {
     assert(Lexer.position.next == 's')
   }
 
-  //"Position.peek"
+  "Position.peek" should "return true if char is not at end of source" in {
+    Lexer.clear()
+    Lexer.position.index = 2
+    Lexer.position.source = "test"
+    assert(Lexer.position.peek() match {
+      case Some(character) => character == 't'
+      case None => false
+    })
+  }
+
+  it should "return false if char is at end of source" in {
+    Lexer.clear()
+    Lexer.position.index = 3
+    Lexer.position.source = "test"
+    assert(!(Lexer.position.peek() match {
+      case Some(_) => true
+      case None => false
+    }))
+  }
 
   "Position.advanceChar" should "increment column, index, and append to lineText if space char" in {
     Lexer.clear()
@@ -343,7 +380,7 @@ class LexerTest extends AnyFlatSpec {
     Lexer.clear()
     Lexer.position.lineNumber = 1
     Lexer.position.columnNumber = 5
-    Lexer.position.source = "test\ntest2"
+    Lexer.position.lineList = Array("test", "test2")
     val fp = Lexer.position.filePositionFactory
     assert(fp.line == 1 && fp.column == 5 && fp.lineText == "test2")
   }

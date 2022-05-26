@@ -55,18 +55,26 @@ object Lexer {
   @tailrec
   def handleQuotes(str: String = ""): Boolean = {
     if (hasNext) {
-      if (!inQuotes && (curr == '\'' || curr == '\"')) {
+      if (!inQuotes && curr == '\"') {
         inQuotes = true
         val tmpStr = str + curr.toString
         advanceChar()
         handleQuotes(tmpStr)
-      } else if (inQuotes && (curr != '\'' && curr != '\"')) {
+      } else if (inQuotes && curr != '\"') {
         val tmpStr = str + curr.toString
         advanceChar()
         handleQuotes(tmpStr)
-      } else if (inQuotes && (curr == '\'' || curr == '\"')) {
+      } else if (inQuotes && curr == '\"') {
         addToken(Value(str + curr.toString))
         inQuotes = false
+        advanceChar()
+
+        hasNext
+      } else if (!inQuotes && curr == '\'' &&
+        position.index <= position.source.length - 3) {
+        addToken(Value("\'" + source(index + 1).toString + "\'"))
+        advanceChar()
+        advanceChar()
         advanceChar()
 
         hasNext
@@ -171,6 +179,7 @@ object Lexer {
     scanHelper()
 
     println("Tokens:")
+    println(tokenStream.size)
     tokenStream.foreach(println(_))
 
     tokenStream
