@@ -161,12 +161,23 @@ object Lexer {
     else addToken(EOF())
   }
 
-  def scan(sourceString: String): Unit = {
-    position.source = sourceString.replace("\r", "")
+  def scan(sourceString: String): ArrayBuffer[Token] = {
+    var tmpSourceString = sourceString.replace("\r", "")
+    if (tmpSourceString.endsWith("\n"))
+      tmpSourceString = tmpSourceString.dropRight(1)
+
+    position.source = tmpSourceString
     position.lineList = position.source.split("\n")
     scanHelper()
 
     println("Tokens:")
     tokenStream.foreach(println(_))
+
+    tokenStream
+  }
+
+  def clear(): Unit = {
+    position.clear()
+    tokenStream.clear()
   }
 }

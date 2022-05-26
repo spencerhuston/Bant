@@ -51,4 +51,15 @@ object Position {
   def filePositionFactory: FilePosition = {
     FilePosition(lineNumber, columnNumber, lineList(lineNumber))
   }
+
+  def clear(): Unit = {
+    index = 0
+    lineNumber = 0
+    columnNumber = 0
+    lineText = ""
+    inQuotes = false
+
+    source = ""
+    lineList = Array[String]()
+  }
 }

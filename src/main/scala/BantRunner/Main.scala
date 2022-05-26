@@ -3,6 +3,9 @@ package BantRunner
 import BantRunner.CmdLineParser.parseCmdLine
 import BantRunner.FileReader.readBantSource
 import Lexer.Lexer.scan
+import Lexer.Token
+
+import scala.collection.mutable.ArrayBuffer
 
 object Main {
   def getSource(args: Array[String]): Option[String] = {
@@ -17,12 +20,23 @@ object Main {
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    getSource(args) match {
+  def run(args: Array[String]): Boolean = {
+    val tokenStream = getSource(args) match {
       case Some(bantSource) =>
         println(bantSource)
         scan(bantSource)
-      case _ => ()
+      case _ => ArrayBuffer[Token]()
     }
+
+    tokenStream.nonEmpty // change as phases are added
+  }
+
+  def clear(): Unit = {
+    Lexer.Lexer.clear()
+  }
+
+  def main(args: Array[String]): Unit = {
+    run(args)
+    clear()
   }
 }

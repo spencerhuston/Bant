@@ -82,11 +82,15 @@ class BantRunnerTest extends AnyFlatSpec {
     assert(Main.getSource(Array("-f", "test.bnt")).isEmpty)
   }
 
-  "Main.main" should "run with valid args and file" in {
-    assert(Main.main(Array("-f", "test.bnt")) == ())
+  "Main.run" should "run with valid args and file" in {
+    assert(Main.run(Array("-f", "src/test/testPrograms/test.bnt")))
   }
 
-  it should "run with bad args and file" in {
-    assert(Main.main(Array("-f", "-d", "test.bnt")) == ())
+  it should "not run with bad args and file" in {
+    assert(!Main.run(Array("-f", "-d", "src/test/testPrograms/test.bnt")))
+  }
+
+  "Main.main" should "run with valid args and file" in {
+    assert(Main.main(Array("-f", "src/test/testPrograms/test.bnt")) == ())
   }
 }
