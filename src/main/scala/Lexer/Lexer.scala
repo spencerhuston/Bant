@@ -98,12 +98,6 @@ object Lexer {
       }
     })
 
-    println(str)
-    println(s"$minCharacterOffCountKeyword : $minCharacterOffCount")
-    println(s"$minCompareDiffKeyword : $minCompareDiff")
-    println(s"$minCharacterOffCountReverseKeyword : $minCharacterOffCountReverse")
-    println(s"$minCompareDiffReverseKeyword : $minCompareDiffReverse\n")
-
     var closestKeyword = minCharacterOffCountKeyword
     var closestValue = minCharacterOffCount
     if (Math.abs(minCompareDiff) < Math.abs(minCharacterOffCount)) {
@@ -122,10 +116,16 @@ object Lexer {
     val score = Math.sqrt(Math.abs(minCharacterOffCount) *
       Math.abs(minCompareDiff) *
       Math.abs(minCharacterOffCountReverse) *
-      Math.abs(minCompareDiffReverse))
-    println(s"$score\n")
+      Math.abs(minCompareDiffReverse)) /
+      (minCharacterOffCount +
+        minCompareDiff +
+        minCharacterOffCountReverse +
+        minCompareDiffReverse)
 
-    warnIdentForKeyword(s"Warning: $str: Did you mean $closestKeyword?", str)
+    if (Math.abs(score) < 0.5) {
+      println(s"$str: $score")
+      warnIdentForKeyword(s"Warning: $str: Did you mean $closestKeyword?", str)
+    }
   }
 
   @tailrec
@@ -287,7 +287,7 @@ object Lexer {
   }
 
   def warnIdentForKeyword(str: String, ident: String): Unit = {
-    WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:")
+    WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:")
     WARN(str)
     WARN(s"${position.lineList(position.lineNumber)}")
     WARN(s"${" " * (position.columnNumber - ident.length)}^\n")
