@@ -1,2 +1,2 @@
-vak x = 5
-print?(x)
+val x = 'c'
+print(x)
