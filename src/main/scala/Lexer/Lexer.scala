@@ -155,6 +155,7 @@ object Lexer {
         addToken(Value("\'" + source(index + 1).toString + "\'"))
         advanceChar()
         advanceChar()
+        advanceChar()
 
         hasNext
       }
@@ -216,12 +217,11 @@ object Lexer {
     } else {
       if (isKeyword(term))
         Keywords.getValue(term) match {
-          case Some(keywordValue) => {
+          case Some(keywordValue) =>
             val actualColumnNumber = position.columnNumber
             position.columnNumber = actualColumnNumber - term.length
             addToken(Keyword(keywordValue, term))
             position.columnNumber = actualColumnNumber
-          }
         }
       else if (isIdent(term)) {
         findClosestKeyword(term)
