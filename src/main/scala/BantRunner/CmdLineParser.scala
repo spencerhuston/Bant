@@ -1,5 +1,7 @@
 package BantRunner
 
+import Logger.Level
+import Logger.Logger.LOG
 import scopt.OParser
 
 object CmdLineParser {
@@ -9,6 +11,7 @@ object CmdLineParser {
                          )
 
   def parseCmdLine(args: Array[String]): Option[ParserConfig] = {
+    LOG(Level.INFO, "Parsing command line args")
     val builder = OParser.builder[ParserConfig]
     val cmdLineParser = {
       import builder._

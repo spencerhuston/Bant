@@ -1,15 +1,2 @@
-laz
-nill
-tife
-fb
-tring
-topaclas
-atcu
-value
-print
-bed
-Residence
-House
-Option
-Some
-bath
+vak x = 5
+print?(x)

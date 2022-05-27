@@ -4,7 +4,8 @@ import BantRunner.CmdLineParser.parseCmdLine
 import BantRunner.FileReader.readBantSource
 import Lexer.Lexer.scan
 import Lexer.{Lexer, Token}
-import Logger.Logger._
+import Logger.Level
+import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, setLevel}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -12,6 +13,7 @@ object Main {
   def getSource(args: Array[String]): Option[String] = {
     parseCmdLine(args) match {
       case Some(config) =>
+        LOG(Level.INFO, s"Config: $config")
         setLevel(config.logLevel)
         readBantSource(config.filepath) match {
           case Some(bantSource) => Some(bantSource)
@@ -22,7 +24,7 @@ object Main {
     }
   }
 
-  def run(args: Array[String]): Boolean = {
+  def run(args: Array[String]): Unit = {
     val tokenStream = getSource(args) match {
       case Some(bantSource) =>
         LOG_HEADER("SOURCE", bantSource)
@@ -30,7 +32,13 @@ object Main {
       case _ => ArrayBuffer[Token]()
     }
 
-    tokenStream.nonEmpty && !Lexer.errorOccurred
+    if (tokenStream.size == 1) {
+      WARN("Warning: Empty source file")
+    } else if (Lexer.errorOccurred) {
+      ERROR("Error(s) occurred, stopping run")
+    }
+
+    // parser phase
   }
 
   def clear(): Unit = {
@@ -38,7 +46,9 @@ object Main {
   }
 
   def main(args: Array[String]): Unit = {
+    LOG(Level.INFO, "Bant Launched")
     run(args)
+    LOG(Level.INFO, "Bant Finished")
     clear()
   }
 }

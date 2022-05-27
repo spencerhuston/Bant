@@ -1,6 +1,7 @@
 package Lexer
 
-import Logger.Logger.{LOG_HEADER, WARN, ERROR}
+import Logger.Level
+import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN}
 import Position._
 import SyntaxDefinitions._
 
@@ -14,6 +15,7 @@ object Lexer {
 
   def addToken[T <: Token](token: T): Unit = {
     tokenStream += token
+    LOG(Level.DEBUG, s"Token added: $token")
   }
 
   def isValueOf(str: String, enum: Enumeration): Boolean = {
@@ -122,8 +124,10 @@ object Lexer {
         minCharacterOffCountReverse +
         minCompareDiffReverse)
 
-    if (Math.abs(score) < 0.5) {
-      println(s"$str: $score")
+    if (Math.abs(score) < 0.5 ||
+      minCharacterOffCount == 1 ||
+      minCharacterOffCountReverse == 1) {
+      //println(s"$str: $score, $minCharacterOffCount, $minCharacterOffCountReverse")
       warnIdentForKeyword(s"Warning: $str: Did you mean $closestKeyword?", str)
     }
   }
@@ -279,16 +283,16 @@ object Lexer {
   }
 
   def reportInvalidCharacter(): Unit = {
-    ERROR(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:")
-    ERROR(s"Error: Invalid character: $curr\n")
+    ERROR(s"Error: Invalid character: $curr")
+    ERROR(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:\n")
     ERROR(s"${position.lineList(position.lineNumber)}")
     ERROR(s"${" " * position.columnNumber}^\n")
     errorOccurred = true
   }
 
   def warnIdentForKeyword(str: String, ident: String): Unit = {
-    WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:")
-    WARN(str)
+    WARN(s"$str")
+    WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:\n")
     WARN(s"${position.lineList(position.lineNumber)}")
     WARN(s"${" " * (position.columnNumber - ident.length)}^\n")
   }

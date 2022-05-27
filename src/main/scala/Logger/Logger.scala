@@ -13,9 +13,8 @@ object Level extends Enumeration {
 }
 
 object Logger {
-  var level: Level.Value = Level.ERROR
-
-  val header = "===================="
+  var level: Level.Value = Level.NONE
+  val header = "========================="
 
   def setLevel(logLevel: String): Unit = {
     Level.values.find((levelValue: Level.Value) => levelValue.toString == logLevel) match {
@@ -25,23 +24,23 @@ object Logger {
   }
 
   def LOG(logLevel: Level.Value, str: String*)(implicit fileName: sourcecode.FileName, line: sourcecode.Line): Unit = {
-    if (logLevel < level) {
-      val datetimeString = DateTimeFormatter.ofPattern("yyyy/MM/dd-HH:mm:ss.SSS").format(LocalDateTime.now()) + "=>"
+    if (logLevel <= level) {
+      val datetimeString = DateTimeFormatter.ofPattern("HH:mm:ss.SSS").format(LocalDateTime.now()) + " | "
       val logLevelString = logLevel.toString
 
       var logString = ""
       str.foreach(logString += _)
 
       if (logLevel == Level.DEBUG)
-        logString += "[" + fileName.value + ":" + line.value + "]"
+        logString += " | [" + fileName.value + ":" + line.value + "]"
 
       print(datetimeString)
       logLevelString match {
-        case "WARN" => Console.print(s"${YELLOW}WARN$RESET")
-        case "ERROR" => Console.print(s"${RED}WARN$RESET")
-        case _ => print(logLevelString)
+        case "WARN" => Console.print(f"${YELLOW}WARN$RESET%5s")
+        case "ERROR" => Console.print(f"${RED}WARN$RESET%5s")
+        case _ => print(f"$logLevelString%5s")
       }
-      print(logString)
+      println(" | " + logString)
     }
   }
 
