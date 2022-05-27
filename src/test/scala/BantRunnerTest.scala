@@ -40,8 +40,8 @@ class BantRunnerTest extends AnyFlatSpec {
   }
 
   it should "pass regardless of arg order" in {
-    assert(parseCmdLine(Array("-f", "test.bnt", "-d")).isDefined)
-    assert(parseCmdLine(Array("-d", "-f", "test.bnt")).isDefined)
+    assert(parseCmdLine(Array("-f", "test.bnt", "-l", "DEBUG")).isDefined)
+    assert(parseCmdLine(Array("-l", "DEBUG", "-f", "test.bnt")).isDefined)
   }
 
   it should "fail if flag in between --file and Bant source filepath" in {
@@ -83,11 +83,11 @@ class BantRunnerTest extends AnyFlatSpec {
   }
 
   "Main.run" should "run with valid args and file" in {
-    assert(Main.run(Array("-f", "src/test/testPrograms/test.bnt")))
+    Main.run(Array("-f", "src/test/testPrograms/test.bnt"))
   }
 
   it should "not run with bad args and file" in {
-    assert(!Main.run(Array("-f", "-d", "src/test/testPrograms/test.bnt")))
+    Main.run(Array("-f", "-d", "src/test/testPrograms/test.bnt"))
   }
 
   "Main.main" should "run with valid args and file" in {
