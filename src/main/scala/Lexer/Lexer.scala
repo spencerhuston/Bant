@@ -1,5 +1,7 @@
 package Lexer
 
+import Logger.Level
+import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN}
 import Position._
 import SyntaxDefinitions._
 
@@ -9,9 +11,11 @@ import scala.collection.mutable.ArrayBuffer
 object Lexer {
   var position: Position.type = Position
   var tokenStream: ArrayBuffer[Token] = ArrayBuffer[Token]()
+  var errorOccurred = false
 
   def addToken[T <: Token](token: T): Unit = {
     tokenStream += token
+    LOG(Level.DEBUG, s"Token added: $token")
   }
 
   def isValueOf(str: String, enum: Enumeration): Boolean = {
@@ -49,6 +53,82 @@ object Lexer {
       }
     } catch {
       case _ => false
+    }
+  }
+
+  def findClosestKeyword(str: String): Unit = {
+    var minCharacterOffCount = 100
+    var minCharacterOffCountKeyword = ""
+    var minCompareDiff = 100
+    var minCompareDiffKeyword = ""
+    var minCharacterOffCountReverse = 100
+    var minCharacterOffCountReverseKeyword = ""
+    var minCompareDiffReverse = 100
+    var minCompareDiffReverseKeyword = ""
+
+    Keywords.values.foreach((keywordVal: Keywords.Value) => {
+      val keywordStr = keywordVal.toString
+      var characterOffCount = Math.abs(keywordStr.length - str.length)
+
+      for (i <- 0 until (if (keywordStr.length < str.length) keywordStr else str).length) {
+        characterOffCount += (if (keywordStr(i) != str(i)) 1 else 0)
+      }
+
+      var characterOffCountReverse = Math.abs(keywordStr.length - str.length)
+      for (i <- 0 until (if (keywordStr.length < str.length) keywordStr else str).length) {
+        characterOffCountReverse += (if (keywordStr.reverse(i) != str.reverse(i)) 1 else 0)
+      }
+
+      val compareDiff = keywordStr.compareTo(str)
+      val compareDiffReverse = keywordStr.reverse.compareTo(str.reverse)
+
+      if (characterOffCount < minCharacterOffCount) {
+        minCharacterOffCount = characterOffCount
+        minCharacterOffCountKeyword = keywordStr
+      }
+      if (compareDiff < minCompareDiff) {
+        minCompareDiff = compareDiff
+        minCompareDiffKeyword = keywordStr
+      }
+      if (characterOffCountReverse < minCharacterOffCountReverse) {
+        minCharacterOffCountReverse = characterOffCountReverse
+        minCharacterOffCountReverseKeyword = keywordStr
+      }
+      if (compareDiffReverse < minCompareDiffReverse) {
+        minCompareDiffReverse = compareDiffReverse
+        minCompareDiffReverseKeyword = keywordStr
+      }
+    })
+
+    var closestKeyword = minCharacterOffCountKeyword
+    var closestValue = minCharacterOffCount
+    if (Math.abs(minCompareDiff) < Math.abs(minCharacterOffCount)) {
+      closestKeyword = minCompareDiffKeyword
+      closestValue = Math.abs(minCompareDiff)
+    }
+    if (Math.abs(minCharacterOffCountReverse) < Math.abs(closestValue)) {
+      closestKeyword = minCharacterOffCountReverseKeyword
+      closestValue = Math.abs(minCharacterOffCountReverse)
+    }
+    if (Math.abs(minCompareDiffReverse) < Math.abs(closestValue)) {
+      closestKeyword = minCompareDiffReverseKeyword
+      closestValue = Math.abs(minCompareDiffReverse)
+    }
+
+    val score = Math.sqrt(Math.abs(minCharacterOffCount) *
+      Math.abs(minCompareDiff) *
+      Math.abs(minCharacterOffCountReverse) *
+      Math.abs(minCompareDiffReverse)) /
+      (minCharacterOffCount +
+        minCompareDiff +
+        minCharacterOffCountReverse +
+        minCompareDiffReverse)
+
+    if (Math.abs(score) < 0.5 ||
+      minCharacterOffCount == 1 ||
+      minCharacterOffCountReverse == 1) {
+      //println(s"$str: $score, $minCharacterOffCount, $minCharacterOffCountReverse")
+      warnIdentForKeyword(s"Warning: $str: Did you mean $closestKeyword?", str)
     }
   }
 
@@ -111,8 +191,6 @@ object Lexer {
         addDelimToken(curr.toString)
         advanceChar()
       }
-    } else {
-      // throw error, not a valid delimiter combo
     }
   }
 
@@ -123,7 +201,10 @@ object Lexer {
       advanceChar()
       handleNumValue(tmpNumVal)
     } else {
+      val actualColumnNumber = position.columnNumber
+      position.columnNumber = actualColumnNumber - numVal.length
       addToken(Value(numVal))
+      position.columnNumber = actualColumnNumber
     }
   }
 
@@ -135,9 +216,20 @@ object Lexer {
       handleTerm(tmpTerm)
     } else {
       if (isKeyword(term))
-        Keywords.getValue(term) match { case Some(keywordValue) => addToken(Keyword(keywordValue, term)) }
+        Keywords.getValue(term) match {
+          case Some(keywordValue) =>
+            val actualColumnNumber = position.columnNumber
+            position.columnNumber = actualColumnNumber - term.length
+            addToken(Keyword(keywordValue, term))
+            position.columnNumber = actualColumnNumber
+        }
       else if (isIdent(term)) {
+        findClosestKeyword(term)
+
+        val actualColumnNumber = position.columnNumber
+        position.columnNumber = actualColumnNumber - term.length
         addToken(Ident(term))
+        position.columnNumber = actualColumnNumber
       }
     }
   }
@@ -159,7 +251,7 @@ object Lexer {
           else handleTerm()
         }
         else {
-          println(s"Invalid character: $curr")
+          reportInvalidCharacter()
           advanceChar()
         }
         scanHelper()
@@ -178,9 +270,9 @@ object Lexer {
     position.lineList = position.source.split("\n")
     scanHelper()
 
-    println("Tokens:")
-    println(tokenStream.size)
-    tokenStream.foreach(println(_))
+    var tokenStreamStringList = ""
+    tokenStream.foreach(tokenStreamStringList += _ + "\n")
+    LOG_HEADER("TOKENS", tokenStreamStringList)
 
     tokenStream
   }
@@ -188,5 +280,20 @@ object Lexer {
   def clear(): Unit = {
     position.clear()
     tokenStream.clear()
+  }
+
+  def reportInvalidCharacter(): Unit = {
+    ERROR(s"Error: Invalid character: $curr")
+    ERROR(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:\n")
+    ERROR(s"${position.lineList(position.lineNumber)}")
+    ERROR(s"${" " * position.columnNumber}^\n")
+    errorOccurred = true
+  }
+
+  def warnIdentForKeyword(str: String, ident: String): Unit = {
+    WARN(s"$str")
+    WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:\n")
+    WARN(s"${position.lineList(position.lineNumber)}")
+    WARN(s"${" " * (position.columnNumber - ident.length)}^\n")
   }
 }

@@ -1,4 +1,8 @@
-type Residence { bed: int, bath: int }
+type Residence {
+    b: int,
+    c: int
+}
+
 type House : Residence {  }
 type Apartment : Residence { }
 type Condo : Residence { }

@@ -1,2 +1,2 @@
-val x = 5
+val x = 'c'
 print(x)
