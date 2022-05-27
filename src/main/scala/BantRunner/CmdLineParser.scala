@@ -5,7 +5,7 @@ import scopt.OParser
 object CmdLineParser {
   case class ParserConfig(
                            filepath: String = "",
-                           debug: Boolean = false
+                           logLevel: String = ""
                          )
 
   def parseCmdLine(args: Array[String]): Option[ParserConfig] = {
@@ -19,9 +19,10 @@ object CmdLineParser {
           .valueName("<file>")
           .action((x, c) => c.copy(filepath = x))
           .text("Bant file, required extension is .bnt"),
-        opt[Unit]('d', "debug")
-          .action((_, c) => c.copy(debug = true))
-          .text("Enable debug mode"),
+        opt[String]('l', "level")
+          .valueName("<logLevel>")
+          .action((x, c) => c.copy(logLevel = x))
+          .text("Log level: INFO, WARN, ERROR, DEBUG"),
         help("help").text("prints this usage text")
       )
     }
