@@ -38,6 +38,7 @@ object Delimiters extends Enumeration {
   val SUBSET: Delimiters.Value = Value(":>")
   val SUPERSET: Delimiters.Value = Value("<:")
   val BIRD: Delimiters.Value = Value("|>")
+  val LAMBDA: Delimiters.Value = Value("\\")
 
   def getValue(str: String): Option[Delimiters.Value] = {
     values.find(_.toString == str) match {

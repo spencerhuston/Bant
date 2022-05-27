@@ -1,2 +1,2 @@
-val double = (x: int) => x * 2
+val double = \x: int, y: int => x * y
 println(map(List {1,2,3}, double))
