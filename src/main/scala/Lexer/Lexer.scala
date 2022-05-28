@@ -1,7 +1,7 @@
 package Lexer
 
 import Logger.Level
-import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN}
+import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, lineList}
 import Position._
 import SyntaxDefinitions._
 
@@ -267,7 +267,7 @@ object Lexer {
       tmpSourceString = tmpSourceString.dropRight(1)
 
     position.source = tmpSourceString
-    position.lineList = position.source.split("\n")
+    lineList = position.source.split("\n")
     scanHelper()
 
     var tokenStreamStringList = ""
@@ -285,7 +285,7 @@ object Lexer {
   def reportInvalidCharacter(): Unit = {
     ERROR(s"Error: Invalid character: $curr")
     ERROR(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:\n")
-    ERROR(s"${position.lineList(position.lineNumber)}")
+    ERROR(s"${lineList(position.lineNumber)}")
     ERROR(s"${" " * position.columnNumber}^\n")
     errorOccurred = true
   }
@@ -293,7 +293,7 @@ object Lexer {
   def warnIdentForKeyword(str: String, ident: String): Unit = {
     WARN(s"$str")
     WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:\n")
-    WARN(s"${position.lineList(position.lineNumber)}")
+    WARN(s"${lineList(position.lineNumber)}")
     WARN(s"${" " * (position.columnNumber - ident.length)}^\n")
   }
 }

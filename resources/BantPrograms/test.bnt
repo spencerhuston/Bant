@@ -1,2 +1,1 @@
-val x = 'c'
-print(x)
+val x: int = if (true) 4 else 3

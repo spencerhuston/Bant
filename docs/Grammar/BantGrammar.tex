@@ -129,11 +129,13 @@
 
 <arg> ::= <ident>`:'<type>[`='<atom>]
 
-<boundOp> ::= `:>' | `<:'
+<lowerBoundOp> ::= `>:'
 
-<boundList> ::= `\{'<ident>[`,'<ident>]*`\}'
+<upperBoundOp> ::= `<:'
 
-<templateTypes> ::= `['<type>[<boundOp><boundList>][`,' <type>[<boundOp><boundList>]]*`]'
+<bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
+
+<templateTypes> ::= `['<type><bounding>[`,' <type><bounding>]*`]'
 
 <funDef> ::= `fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp><terminator>
 
@@ -166,7 +168,6 @@
 \alt <ident>[`.'<ident>]*
 
 <tight> ::= <app>[`|>'<app>]
-\alt [`('<smp>`)']+
 \alt '\{'<exp>`\}'
 
 <utight> ::= [<op>]<tight>

@@ -1,5 +1,7 @@
 package Lexer
 
+import Logger.Logger.lineList
+
 object Position {
   var index = 0
   var lineNumber = 0
@@ -8,7 +10,6 @@ object Position {
   var inQuotes = false
 
   var source: String = ""
-  var lineList: Array[String] = Array[String]()
 
   def hasNext: Boolean = index != source.length
   def curr: Char = source(index)

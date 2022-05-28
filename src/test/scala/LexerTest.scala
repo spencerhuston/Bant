@@ -1,6 +1,7 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import BantRunner.Main
 import Lexer.{Lexer, SyntaxDefinitions}
+import Logger.Logger.lineList
 import SyntaxDefinitions.{Delimiters, Keywords, RawDelimiters}
 
 class LexerTest extends AnyFlatSpec {
@@ -235,7 +236,7 @@ class LexerTest extends AnyFlatSpec {
       Lexer.position.lineText == "" &&
       !Lexer.position.inQuotes &&
       Lexer.position.source == "" &&
-      Lexer.position.lineList.isEmpty &&
+      lineList.isEmpty &&
       Lexer.tokenStream.isEmpty)
   }
 
@@ -380,7 +381,7 @@ class LexerTest extends AnyFlatSpec {
     Lexer.clear()
     Lexer.position.lineNumber = 1
     Lexer.position.columnNumber = 5
-    Lexer.position.lineList = Array("test", "test2")
+    lineList = Array("test", "test2")
     val fp = Lexer.position.filePositionFactory
     assert(fp.line == 1 && fp.column == 5 && fp.lineText == "test2")
   }
@@ -393,7 +394,7 @@ class LexerTest extends AnyFlatSpec {
     Lexer.position.lineText = "test"
     Lexer.position.inQuotes = true
     Lexer.position.source = "test\ntest2"
-    Lexer.position.lineList = Array("test", "test2")
+    lineList = Array("test", "test2")
 
     Lexer.position.clear()
 
@@ -403,6 +404,6 @@ class LexerTest extends AnyFlatSpec {
           Lexer.position.lineText == "" &&
           !Lexer.position.inQuotes &&
           Lexer.position.source == "" &&
-          Lexer.position.lineList.isEmpty)
+          lineList.isEmpty)
   }
 }
