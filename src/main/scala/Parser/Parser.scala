@@ -93,6 +93,18 @@ object Parser {
     matched
   }
 
+  def matchIdent: String = {
+    skipTerminator()
+    if (!curr.isInstanceOf[Ident]) {
+      reportBadMatch("<ident>")
+      return ""
+    }
+
+    val ident = curr.tokenText
+    advance()
+    ident
+  }
+
   def matchOperatorOptional: Boolean = {
     skipTerminator()
     val matched = arithmeticOperators.contains(curr) || booleanOperators.contains(curr)
@@ -103,6 +115,7 @@ object Parser {
 
   def parse(tokens: ArrayBuffer[Token]): Exp = {
     tokenStream = tokens
+    skipTerminator()
     parseExp
   }
 
@@ -121,8 +134,7 @@ object Parser {
     val token = curr
     val isLazy = matchOptional(LAZY)
     matchRequired(VAL)
-    val ident = curr.tokenText
-    advance()
+    val ident = matchIdent
 
     var letType: Type = UnknownType()
     if (matchOptional(COLON))
@@ -193,12 +205,7 @@ object Parser {
     matchRequired(MATCH)
     matchRequired(LEFT_PAREN)
 
-    if (!curr.isInstanceOf[Ident]) {
-      reportBadMatch("<ident>", "Pattern match requires reference")
-      return none
-    }
-
-    val matchIdent = Ref(curr, curr.tokenText)
+    val ident = Ref(curr, matchIdent)
     advance()
     matchRequired(RIGHT_PAREN)
     matchRequired(LEFT_BRACE)
@@ -222,7 +229,7 @@ object Parser {
     }
 
     matchRequired(RIGHT_BRACE)
-    Match(matchToken, matchIdent, cases)
+    Match(matchToken, ident, cases)
   }
 
   def parseSwitch: Exp = {

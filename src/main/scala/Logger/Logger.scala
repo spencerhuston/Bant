@@ -1,5 +1,7 @@
 package Logger
 
+import Parser._
+
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.Console.{RED, RESET, YELLOW}
@@ -53,6 +55,29 @@ object Logger {
       println(str)
       println(header)
     }
+  }
+
+  def printAst(exp: Exp): String = {
+    var astString = ""
+    def pprint(obj: Any, depth: Int = 0, paramName: Option[String] = None): Unit = {
+      val indent = "  " * depth
+      val prettyName = paramName.fold("")(x => s"$x: ")
+      val ptype = obj match { case _: Iterable[Any] => "" case obj: Product => obj.productPrefix case _ => obj.toString }
+
+      astString += s"$indent$prettyName$ptype\n"
+
+      obj match {
+        case seq: Iterable[Any] =>
+          seq.foreach(pprint(_, depth + 1))
+        case obj: Product =>
+          (obj.productIterator zip obj.productElementNames)
+            .foreach { case (subObj, paramName) => pprint(subObj, depth + 1, Some(paramName)) }
+        case _ =>
+      }
+    }
+
+    pprint(exp)
+    astString
   }
 
   def WARN(str: String): Unit = Console.println(s"${YELLOW}$str$RESET")
