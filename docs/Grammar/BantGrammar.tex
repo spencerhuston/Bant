@@ -91,9 +91,9 @@
 
 <adt> ::= `type' <ident> [`:' <ident>]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
  
-<typeclass> ::= `typeclass' <ident> `\{'<prog>`\}'
+<typeclass> ::= `typeclass' <ident> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'
 
-<instance> ::= `instance' <ident>`:'<ident>`\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'
+<instance> ::= `instance' <ident>`:'<ident>`\{'<prog>`\}'
 
 \end{grammar}
 
@@ -151,9 +151,9 @@
 
 \begin{grammar}
 
-<match> ::= `match' `('<ident>`)' `\{'`case' <type>`=>' <smp>[`,' `case' <type> `=>' <smp>]*`\}'
+<match> ::= `match' `('<ident>`)' `\{'`case' <type>`=>' <smp>[`case' <type> `=>' <smp>]*`\}'
 
-<switch> ::= `switch' `('<atom>`)' `\{'`case' <atom>`=>' <smp>[`,' `case' <atom> `=>' <smp>]*`\}'
+<switch> ::= `switch' `('<atom>`)' `\{'`case' <atom>`=>' <smp>[`case' <atom> `=>' <smp>]*`\}'
 
 <matchSwitch> ::= <match> | <switch>
 

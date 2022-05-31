@@ -4,7 +4,7 @@ import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Delimiters
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, Ident, Keyword, Terminator, Token, Value}
-import Logger.Level.INFO
+import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, lineList}
 import TypeChecker._
 
@@ -27,7 +27,13 @@ object Parser {
       })
   }
 
+  def skipTerminator(): Unit = {
+    while (matchTerminator)
+      ()
+  }
+
   def matchRequired[T <: Enumeration#Value](value: T): Boolean = {
+    skipTerminator()
     val matched = curr match {
       case Keyword(keywordValue, _, _) =>
         keywordValue == value
@@ -45,6 +51,7 @@ object Parser {
   }
 
   def matchOptional[T <: Enumeration#Value](value: T): Boolean = {
+    skipTerminator()
     val matched = curr match {
       case Keyword(keywordValue, _, _) =>
         keywordValue == value
@@ -59,14 +66,35 @@ object Parser {
     matched
   }
 
+  def peek[T <: Enumeration#Value](value: T): Boolean = {
+    if (index < tokenStream.length - 1) {
+      tokenStream(index + 1) match
+      {
+        case Keyword(keywordValue, _, _) =>
+          keywordValue == value
+        case Delimiter(delimValue, _, _) =>
+          delimValue == value
+        case _ => false
+      }
+    }
+    else
+      false
+  }
+
   def matchTerminator: Boolean = {
-    curr match {
+    val matched = curr match {
       case Terminator(_, _) => true
       case _ => false
     }
+
+    if (matched)
+      advance()
+
+    matched
   }
 
   def matchOperatorOptional: Boolean = {
+    skipTerminator()
     val matched = arithmeticOperators.contains(curr) || booleanOperators.contains(curr)
     if (matched)
       advance()
@@ -79,7 +107,7 @@ object Parser {
   }
 
   def parseExp: Exp = {
-    LOG(INFO, s"parseExp: $curr")
+    LOG(DEBUG, s"parseExp: $curr")
     curr match {
         case Keyword(VAL, _, _) => parseLet
         case Keyword(LAZY, _, _) => parseLet
@@ -89,7 +117,7 @@ object Parser {
   }
 
   def parseLet: Exp = {
-    LOG(INFO, s"parseLet: $curr")
+    LOG(DEBUG, s"parseLet: $curr")
     val token = curr
     val isLazy = matchOptional(LAZY)
     matchRequired(VAL)
@@ -104,19 +132,21 @@ object Parser {
     val expValue: Exp = parseSimpleExp
 
     var afterExp: Exp = none
-    if (matchTerminator)
+    if (matchTerminator) {
+      skipTerminator()
       afterExp = parseExp
+    }
 
     Let(token, isLazy, ident, letType, expValue, afterExp)
   }
 
   def parseInclude: Exp = {
-    LOG(INFO, s"parseInclude: $curr")
+    LOG(DEBUG, s"parseInclude: $curr")
     none
   }
 
   def parseSimpleExp: Exp = {
-    LOG(INFO, s"parseSimpleExp: $curr")
+    LOG(DEBUG, s"parseSimpleExp: $curr")
     curr match {
         case Keyword(IF, _, _) => parseBranch
         case Keyword(LIST, _, _) => parseCollectionValue
@@ -136,9 +166,9 @@ object Parser {
   }
 
   def parseBranch: Exp = {
-    LOG(INFO, s"parseBranch: $curr")
+    LOG(DEBUG, s"parseBranch: $curr")
     val token = curr
-    advance()
+    matchRequired(IF)
     matchRequired(LEFT_PAREN)
     val condition = parseSimpleExp
     matchRequired(RIGHT_PAREN)
@@ -152,78 +182,142 @@ object Parser {
   }
 
   def parseCollectionValue: Exp = {
-    LOG(INFO, s"parseCollectionValue: $curr")
+    LOG(DEBUG, s"parseCollectionValue: $curr")
     none
   }
 
   def parseMatch: Exp = {
-    LOG(INFO, s"parseMatch: $curr")
-    none
+    LOG(DEBUG, s"parseMatch: $curr")
+
+    val matchToken = curr
+    matchRequired(MATCH)
+    matchRequired(LEFT_PAREN)
+
+    if (!curr.isInstanceOf[Ident]) {
+      reportBadMatch("<ident>", "Pattern match requires reference")
+      return none
+    }
+
+    val matchIdent = Ref(curr, curr.tokenText)
+    advance()
+    matchRequired(RIGHT_PAREN)
+    matchRequired(LEFT_BRACE)
+
+    val cases = ArrayBuffer[MatchCase]()
+
+    var caseToken = curr
+    matchRequired(CASE)
+    var caseType = parseType
+    matchRequired(CASE_EXP)
+    var caseExp = parseSimpleExp
+    cases += MatchCase(caseToken, caseType, caseExp)
+
+    while (!peek(RIGHT_BRACE)) {
+      caseToken = curr
+      matchRequired(CASE)
+      caseType = parseType
+      matchRequired(CASE_EXP)
+      caseExp = parseSimpleExp
+      cases += MatchCase(caseToken, caseType, caseExp)
+    }
+
+    matchRequired(RIGHT_BRACE)
+    Match(matchToken, matchIdent, cases)
   }
 
   def parseSwitch: Exp = {
-    LOG(INFO, s"parseSwitch: $curr")
-    none
+    LOG(DEBUG, s"parseSwitch: $curr")
+
+    val switchToken = curr
+    matchRequired(SWITCH)
+    matchRequired(LEFT_PAREN)
+    val switchAtom = parseAtom
+    matchRequired(RIGHT_PAREN)
+    matchRequired(LEFT_BRACE)
+
+    val cases = ArrayBuffer[SwitchCase]()
+
+    var caseToken = curr
+    matchRequired(CASE)
+    var caseAtom = parseAtom
+    matchRequired(CASE_EXP)
+    var caseExp = parseSimpleExp
+    cases += SwitchCase(caseToken, caseAtom, caseExp)
+
+    while (!peek(RIGHT_BRACE)) {
+      caseToken = curr
+      matchRequired(CASE)
+      caseAtom = parseAtom
+      matchRequired(CASE_EXP)
+      caseExp = parseSimpleExp
+      cases += SwitchCase(caseToken, caseAtom, caseExp)
+    }
+
+    matchRequired(RIGHT_BRACE)
+    Switch(switchToken, switchAtom, cases)
   }
 
   def parseTypeclass: Exp = {
-    LOG(INFO, s"parseTypeclass: $curr")
+    LOG(DEBUG, s"parseTypeclass: $curr")
     none
   }
 
   def parseInstance: Exp = {
-    LOG(INFO, s"parseInstance: $curr")
+    LOG(DEBUG, s"parseInstance: $curr")
     none
   }
 
   def parseAdt: Exp = {
-    LOG(INFO, s"parseAdt: $curr")
+    LOG(DEBUG, s"parseAdt: $curr")
     none
   }
 
   def parseProg: Exp = {
-    LOG(INFO, s"parseProg: $curr")
+    LOG(DEBUG, s"parseProg: $curr")
     none
   }
 
   def parseLambda: Exp = {
-    LOG(INFO, s"parseLambda: $curr")
+    LOG(DEBUG, s"parseLambda: $curr")
     none
   }
 
   def parseUtight: Exp = {
-    LOG(INFO, s"parseUtight: $curr")
+    LOG(DEBUG, s"parseUtight: $curr")
     val unaryOp = matchOperatorOptional // TODO
     parseTight
   }
 
   def parseTight: Exp = {
-    LOG(INFO, s"parseTight: $curr")
+    LOG(DEBUG, s"parseTight: $curr")
     curr match {
       case Delimiter(LEFT_BRACE, _, _) =>
         matchRequired(LEFT_BRACE)
         val tmpExp = parseSimpleExp
         matchRequired(RIGHT_BRACE)
         tmpExp
-      case _ => parseApp
+      case _ => parseAtom
     }
   }
 
-  def parseApp: Exp = {
-    LOG(INFO, s"parseApp: $curr")
+  def parseAtom: Exp = {
+    LOG(DEBUG, s"parseAtom: $curr")
     curr match {
       case Delimiter(LEFT_PAREN, _, _) =>
         matchRequired(LEFT_PAREN)
         val tmpExp = parseSimpleExp
         matchRequired(RIGHT_PAREN)
         tmpExp
-      case Ident(ident, _) => none // TODO
+      case Ident(ident, _) =>
+        val token = curr
+        advance()
+        Ref(token, ident)
       case _ => parsePrim
     }
   }
 
   def parsePrim: Exp = {
-    LOG(INFO, s"parsePrim: $curr")
+    LOG(DEBUG, s"parsePrim: $curr")
     curr match {
       case Keyword(TRUE, _, _) =>
         advance()
@@ -246,11 +340,12 @@ object Parser {
           advance()
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
+      case Terminator(_, _) => none
     }
   }
 
   def parseType: Type = { // TODO
-    LOG(INFO, s"parseType: $curr")
+    LOG(DEBUG, s"parseType: $curr")
     val expType = curr match {
       case Keyword(INT, _, _) =>
         advance()
@@ -296,7 +391,7 @@ object Parser {
       case Keyword(TUPLE, _, _) =>
         advance()
         matchRequired(LEFT_BRACKET)
-        val tupleTypes = ArrayBuffer[Type]()
+        val tupleTypes = ArrayBuffer[Type](parseType)
         while (matchOptional(COMMA))
           tupleTypes += parseType
         matchRequired(RIGHT_BRACKET)
@@ -325,8 +420,10 @@ object Parser {
       expType
   }
 
-  def reportBadMatch(expected: String): Unit = {
+  def reportBadMatch(expected: String, note: String = ""): Unit = {
     ERROR(s"Error: Expected: $expected, got ${curr.tokenText}")
+    if (note.nonEmpty)
+      ERROR(s"($note)")
     ERROR(s"Line: ${curr.fp.line + 1}, Column: ${curr.fp.column + 1}:\n")
     ERROR(s"${lineList(curr.fp.line)}")
     ERROR(s"${" " * curr.fp.column}^\n")

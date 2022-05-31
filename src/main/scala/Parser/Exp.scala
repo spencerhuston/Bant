@@ -25,7 +25,8 @@ case class Let(token: Token,
 case class Prim(token: Token,
                 left: Exp,
                 right: Exp) extends Exp
-case class Ref(token: Token) extends Exp
+case class Ref(token: Token,
+               ident: String) extends Exp
 case class Branch(token: Token,
                   condition: Exp,
                   ifBranch: Exp,
@@ -66,8 +67,17 @@ case class SetDef(token: Token) extends Exp
 case class BlockGet(token: Token) extends Exp
 
 // Pattern Matching
-case class Match(token: Token) extends Exp
-case class Switch(token: Token) extends Exp
-case class Case(token: Token) extends Exp
+case class Match(token: Token,
+                 ident: Ref,
+                 cases: ArrayBuffer[MatchCase]) extends Exp
+case class MatchCase(token: Token,
+                     caseType: Type,
+                     caseExp: Exp) extends Exp
+case class Switch(token: Token,
+                  value: Exp,
+                  cases: ArrayBuffer[SwitchCase]) extends Exp
+case class SwitchCase(token: Token,
+                      caseAtom: Exp,
+                      caseExp: Exp) extends Exp
 
 case class NoOp(token: Token) extends Exp
