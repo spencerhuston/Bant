@@ -5,7 +5,8 @@ import BantRunner.FileReader.readBantSource
 import Lexer.Lexer.scan
 import Lexer.{Lexer, Token}
 import Logger.Level
-import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, printAst, setLevel}
+import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, setLevel}
+import Logger.PrettyPrinter.astToString
 import Parser.Parser.parse
 
 import scala.collection.mutable.ArrayBuffer
@@ -39,7 +40,7 @@ object Main {
       ERROR("Error(s) occurred, stopping run")
     } else {
       var rootExp = parse(tokenStream)
-      LOG_HEADER("Untyped AST", printAst(rootExp))
+      LOG_HEADER("Untyped AST", astToString(rootExp))
     }
   }
 

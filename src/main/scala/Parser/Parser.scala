@@ -159,6 +159,7 @@ object Parser {
 
   def parseSimpleExp: Exp = {
     LOG(DEBUG, s"parseSimpleExp: $curr")
+    skipTerminator()
     curr match {
         case Keyword(IF, _, _) => parseBranch
         case Keyword(LIST, _, _) => parseCollectionValue
@@ -206,7 +207,6 @@ object Parser {
     matchRequired(LEFT_PAREN)
 
     val ident = Ref(curr, matchIdent)
-    advance()
     matchRequired(RIGHT_PAREN)
     matchRequired(LEFT_BRACE)
 
