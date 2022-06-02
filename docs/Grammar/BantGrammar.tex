@@ -89,7 +89,9 @@
 
 \begin{grammar}
 
-<adt> ::= `type' <ident> [`:' <ident>]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
+<generic> ::= `['<ident>[`,' <ident>]*`]'
+
+<adt> ::= `type' <ident>[<generic>][`:' <ident>[<generic>]]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
  
 <typeclass> ::= `typeclass' <ident> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'
 
@@ -135,7 +137,7 @@
 
 <bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
 
-<templateTypes> ::= `['<type><bounding>[`,' <type><bounding>]*`]'
+<templateTypes> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
 
 <funDef> ::= `fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp><terminator>
 
@@ -151,9 +153,9 @@
 
 \begin{grammar}
 
-<match> ::= `match' `('<ident>`)' `\{'`case' <type>`=>' <smp>[`case' <type> `=>' <smp>]*`\}'
+<caseVal> ::= <type>|<smp>
 
-<switch> ::= `switch' `('<atom>`)' `\{'`case' <atom>`=>' <smp>[`case' <atom> `=>' <smp>]*`\}'
+<match> ::= `match' `('<smp>`)' `\{'`case' <caseVal>`=>' <smp>[`case' <caseVal> `=>' <smp>]*`\}'
 
 <matchSwitch> ::= <match> | <switch>
 
