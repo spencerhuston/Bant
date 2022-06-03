@@ -226,8 +226,8 @@ object Parser {
   }
 
   def parseCase: Case = {
-    val caseToken = curr
     matchRequired(CASE)
+    val caseToken = curr
     val casePattern = parseCasePattern
     matchRequired(CASE_EXP)
     val caseExp = parseSimpleExp
@@ -258,9 +258,10 @@ object Parser {
         advance()
         val values = ArrayBuffer[ValueCasePattern]()
         matchRequired(LEFT_PAREN)
-        while (peek(COMMA))
+
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
           values += parseValueCase
-        matchRequired(RIGHT_PAREN)
+
         ConstructorCase(ident, values)
       case _ =>
         val token = curr
@@ -391,7 +392,7 @@ object Parser {
     }
   }
 
-  def parseType: Type = { // TODO
+  def parseType: Type = {
     LOG(DEBUG, s"parseType: $curr")
     val expType = curr match {
       case Keyword(INT, _, _) =>
@@ -444,16 +445,22 @@ object Parser {
         matchRequired(RIGHT_BRACKET)
         TupleType(tupleTypes)
       case Delimiter(LEFT_PAREN, _, _) =>
-        advance()
         matchRequired(LEFT_PAREN)
         val argTypes = ArrayBuffer[Type]()
-        while (matchOptional(COMMA))
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
           argTypes += parseType
         matchRequired(RIGHT_PAREN)
         matchRequired(RETURN_TYPE)
         FuncType(argTypes, parseType)
       case Ident(ident, _) =>
-        AdtType(ident)
+        advance()
+        val generics = ArrayBuffer[Type]()
+        if (matchOptional(LEFT_BRACKET)) {
+          generics += parseType
+          while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET))
+            generics += parseType
+        }
+        AdtType(ident, generics)
       case _ =>
         reportBadType(curr)
         UnknownType()
