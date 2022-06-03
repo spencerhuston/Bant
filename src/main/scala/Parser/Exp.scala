@@ -51,7 +51,7 @@ case class Arg(token: Token) extends Exp
 case class Lambda(token: Token,
                   args: ArrayBuffer[Arg],
                   body: Exp) extends Exp
-case class App(token: Token) extends Exp // TODO
+case class App(token: Token) extends Exp
 
 // ADT
 case class Adt(token: Token) extends Exp
@@ -68,16 +68,21 @@ case class BlockGet(token: Token) extends Exp
 
 // Pattern Matching
 case class Match(token: Token,
-                 ident: Ref,
-                 cases: ArrayBuffer[MatchCase]) extends Exp
-case class MatchCase(token: Token,
-                     caseType: Type,
-                     caseExp: Exp) extends Exp
-case class Switch(token: Token,
-                  value: Exp,
-                  cases: ArrayBuffer[SwitchCase]) extends Exp
-case class SwitchCase(token: Token,
-                      caseAtom: Exp,
-                      caseExp: Exp) extends Exp
+                 value: Exp,
+                 cases: ArrayBuffer[Case]) extends Exp
+case class Case(token: Token,
+                casePattern: CasePattern,
+                caseExp: Exp) extends Exp
+
+// Pattern Matching Values
+sealed trait CasePattern { }
+case class TypeCase(ident: String,
+                    caseType: Type) extends CasePattern
+case class ValueCase(value: ValueCasePattern) extends CasePattern
+
+sealed trait ValueCasePattern { }
+case class ConstructorCase(ident: String, values: ArrayBuffer[ValueCasePattern]) extends ValueCasePattern
+case class LitCase(value: Val) extends ValueCasePattern
+case class AnyCase() extends ValueCasePattern
 
 case class NoOp(token: Token) extends Exp

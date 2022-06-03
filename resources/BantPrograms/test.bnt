@@ -1,1 +1,7 @@
-val x: int = if (true) 4 else 3
+val h: int = 0
+match (h) {
+    case i: int => 5
+    case 0 => 3
+    case _ => 1
+    case _ => 2
+}

@@ -18,7 +18,6 @@ object Keywords extends Enumeration {
   val SET: Keywords.Value = Value("Set")
   val FN: Keywords.Value = Value("fn")
   val MATCH: Keywords.Value = Value("match")
-  val SWITCH: Keywords.Value = Value("switch")
   val CASE: Keywords.Value = Value("case")
   val IF: Keywords.Value = Value("if")
   val ELSE: Keywords.Value = Value("else")

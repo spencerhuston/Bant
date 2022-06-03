@@ -32,7 +32,9 @@ object Lexer {
 
   def isComment: Boolean = !inQuotes && curr == '#'
 
-  def isTerminator: Boolean = curr == ';' || curr == '\n'
+  def isNewline: Boolean = curr == '\n'
+
+  def isSemicolon: Boolean = curr == ';'
 
   def isWhitespace: Boolean = curr == ' ' || curr == '\t'
 
@@ -57,6 +59,9 @@ object Lexer {
   }
 
   def findClosestKeyword(str: String): Unit = {
+    if (str.length == 1)
+      return
+
     var minCharacterOffCount = 100
     var minCharacterOffCountKeyword = ""
     var minCompareDiff = 100
@@ -191,6 +196,9 @@ object Lexer {
         addDelimToken(curr.toString)
         advanceChar()
       }
+    } else {
+      reportInvalidCharacter()
+      advanceChar()
     }
   }
 
@@ -241,9 +249,13 @@ object Lexer {
         if (isValidCharacter) {
           if (isComment)
             skipLine()
-          else if (isTerminator) {
+          else if (isNewline) {
             addToken(Terminator(curr.toString.replace("\n", "\\n")))
-            newline(curr == ';')
+            newline
+          }
+          else if (isSemicolon) {
+            addToken(Terminator(";"))
+            advanceChar()
           }
           else if (isWhitespace) advanceChar()
           else if (isRawDelimiter) handleDelimiter()

@@ -44,8 +44,8 @@ object Position {
     resetLine()
   }
 
-  def newline(semicolon: Boolean = false): Unit = {
-    index += (if (semicolon) 2 else 1)
+  def newline(): Unit = {
+    index += 1
     resetLine()
   }
 

@@ -5,7 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, Ident, Keyword, Terminator, Token, Value}
 import Logger.Level.DEBUG
-import Logger.Logger.{ERROR, LOG, lineList}
+import Logger.Logger.{ERROR, LOG, WARN, lineList}
 import TypeChecker._
 
 import scala.collection.mutable.ArrayBuffer
@@ -44,7 +44,7 @@ object Parser {
     }
 
     if (!matched)
-      reportBadMatch(value.toString)
+      reportBadMatch(curr, value.toString)
 
     advance()
     matched
@@ -96,11 +96,17 @@ object Parser {
   def matchIdent: String = {
     skipTerminator()
     if (!curr.isInstanceOf[Ident]) {
-      reportBadMatch("<ident>")
+      reportBadMatch(curr, "<ident>")
       return ""
     }
 
     val ident = curr.tokenText
+
+    if (ident == "_") {
+      ERROR(s"Error: _ reserved for matches and lambdas")
+      reportLine(curr)
+    }
+
     advance()
     ident
   }
@@ -168,7 +174,6 @@ object Parser {
         case Keyword(SET, _, _) => parseCollectionValue
         case Keyword(DICT, _, _) => parseCollectionValue
         case Keyword(MATCH, _, _) => parseMatch
-        case Keyword(SWITCH, _, _) => parseSwitch
         case Keyword(TYPECLASS, _, _) => parseTypeclass
         case Keyword(INSTANCE, _, _) => parseInstance
         case Keyword(TYPE, _, _) => parseAdt
@@ -205,63 +210,94 @@ object Parser {
     val matchToken = curr
     matchRequired(MATCH)
     matchRequired(LEFT_PAREN)
-
-    val ident = Ref(curr, matchIdent)
+    val matchVal = parseSimpleExp
     matchRequired(RIGHT_PAREN)
+
     matchRequired(LEFT_BRACE)
+    val cases = ArrayBuffer[Case](parseCase)
 
-    val cases = ArrayBuffer[MatchCase]()
+    while (!peek(RIGHT_BRACE))
+      cases += parseCase
 
-    var caseToken = curr
-    matchRequired(CASE)
-    var caseType = parseType
-    matchRequired(CASE_EXP)
-    var caseExp = parseSimpleExp
-    cases += MatchCase(caseToken, caseType, caseExp)
-
-    while (!peek(RIGHT_BRACE)) {
-      caseToken = curr
-      matchRequired(CASE)
-      caseType = parseType
-      matchRequired(CASE_EXP)
-      caseExp = parseSimpleExp
-      cases += MatchCase(caseToken, caseType, caseExp)
-    }
+    warnAnyCase(cases)
 
     matchRequired(RIGHT_BRACE)
-    Match(matchToken, ident, cases)
+    Match(matchToken, matchVal, cases)
   }
 
-  def parseSwitch: Exp = {
-    LOG(DEBUG, s"parseSwitch: $curr")
-
-    val switchToken = curr
-    matchRequired(SWITCH)
-    matchRequired(LEFT_PAREN)
-    val switchAtom = parseAtom
-    matchRequired(RIGHT_PAREN)
-    matchRequired(LEFT_BRACE)
-
-    val cases = ArrayBuffer[SwitchCase]()
-
-    var caseToken = curr
+  def parseCase: Case = {
+    val caseToken = curr
     matchRequired(CASE)
-    var caseAtom = parseAtom
+    val casePattern = parseCasePattern
     matchRequired(CASE_EXP)
-    var caseExp = parseSimpleExp
-    cases += SwitchCase(caseToken, caseAtom, caseExp)
+    val caseExp = parseSimpleExp
+    Case(caseToken, casePattern, caseExp)
+  }
 
-    while (!peek(RIGHT_BRACE)) {
-      caseToken = curr
-      matchRequired(CASE)
-      caseAtom = parseAtom
-      matchRequired(CASE_EXP)
-      caseExp = parseSimpleExp
-      cases += SwitchCase(caseToken, caseAtom, caseExp)
+  def parseCasePattern: CasePattern = {
+    LOG(DEBUG, s"parseCaseValue: $curr")
+    curr match {
+      case Ident(tokenText, _) if peek(COLON) =>
+        val ident = tokenText
+        advance()
+        matchRequired(COLON)
+        val caseValType = parseType
+        TypeCase(ident, caseValType)
+      case _ =>
+        ValueCase(parseValueCase)
     }
+  }
 
-    matchRequired(RIGHT_BRACE)
-    Switch(switchToken, switchAtom, cases)
+  def parseValueCase: ValueCasePattern = {
+    curr match {
+      case Ident(tokenText, _) if tokenText == "_" =>
+        advance()
+        AnyCase()
+      case Ident(tokenText, _) =>
+        val ident = tokenText
+        advance()
+        val values = ArrayBuffer[ValueCasePattern]()
+        matchRequired(LEFT_PAREN)
+        while (peek(COMMA))
+          values += parseValueCase
+        matchRequired(RIGHT_PAREN)
+        ConstructorCase(ident, values)
+      case _ =>
+        val token = curr
+        parsePrim match {
+          case NoOp(_) =>
+            reportBadMatch(token, "<primitive>")
+            advance()
+            AnyCase()
+          case l: Lit =>
+            LitCase(l.value)
+        }
+    }
+  }
+
+  def warnAnyCase(cases: ArrayBuffer[Case]): Unit = {
+    var token = cases(0).token
+    var count = 0
+    cases.foreach((c: Case) => {
+      c.casePattern match {
+        case tc: TypeCase if tc.ident == "_" => count += 1; token = c.token
+        case vc: ValueCase if vc.value.isInstanceOf[AnyCase] => count += 1; token = c.token
+        case _ => 0
+      }
+    })
+
+    if (count > 1)
+      warn(token, "Wildcard occurs more than once")
+
+    token = cases(0).token
+    if (cases.indexWhere((c: Case) => {
+      c.casePattern match {
+        case vc: ValueCase if vc.value.isInstanceOf[AnyCase] => token = c.token; true
+        case _ => false
+      }
+    }) != cases.length - 1) {
+      warn(token, "Wildcard is not last case pattern")
+    }
   }
 
   def parseTypeclass: Exp = {
@@ -289,9 +325,10 @@ object Parser {
     none
   }
 
+  // TODO
   def parseUtight: Exp = {
     LOG(DEBUG, s"parseUtight: $curr")
-    val unaryOp = matchOperatorOptional // TODO
+    val unaryOp = matchOperatorOptional
     parseTight
   }
 
@@ -348,6 +385,9 @@ object Parser {
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
       case Terminator(_, _) => none
+      case _ =>
+        reportUnexpected(curr)
+        none
     }
   }
 
@@ -415,7 +455,7 @@ object Parser {
       case Ident(ident, _) =>
         AdtType(ident)
       case _ =>
-        reportBadType()
+        reportBadType(curr)
         UnknownType()
     }
 
@@ -427,21 +467,34 @@ object Parser {
       expType
   }
 
-  def reportBadMatch(expected: String, note: String = ""): Unit = {
-    ERROR(s"Error: Expected: $expected, got ${curr.tokenText}")
+  def reportBadMatch(token: Token, expected: String, note: String = ""): Unit = {
+    ERROR(s"Error: Expected: $expected, got ${token.tokenText}")
     if (note.nonEmpty)
       ERROR(s"($note)")
-    ERROR(s"Line: ${curr.fp.line + 1}, Column: ${curr.fp.column + 1}:\n")
-    ERROR(s"${lineList(curr.fp.line)}")
-    ERROR(s"${" " * curr.fp.column}^\n")
+    reportLine(token)
+  }
+
+  def reportBadType(token: Token): Unit = {
+    ERROR(s"Error: Unexpected type: ${token.tokenText}")
+    reportLine(token)
+  }
+
+  def reportUnexpected(token: Token): Unit = {
+    ERROR(s"Unexpected : ${token.tokenText}")
+    reportLine(token)
+  }
+
+  def reportLine(token: Token): Unit = {
+    ERROR(s"Line: ${token.fp.line + 1}, Column: ${token.fp.column + 1}:\n")
+    ERROR(s"${lineList(token.fp.line)}")
+    ERROR(s"${" " * token.fp.column}^\n")
     errorOccurred = true
   }
 
-  def reportBadType(): Unit = {
-    ERROR(s"Error: Unexpected type: ${curr.tokenText}")
-    ERROR(s"Line: ${curr.fp.line + 1}, Column: ${curr.fp.column + 1}:\n")
-    ERROR(s"${lineList(curr.fp.line)}")
-    ERROR(s"${" " * curr.fp.column}^\n")
-    errorOccurred = true
+  def warn(token: Token, str: String): Unit = {
+    WARN(s"$str")
+    WARN(s"Line: ${token.fp.line + 1}, Column: ${token.fp.column + 1}:\n")
+    WARN(s"${lineList(token.fp.line)}")
+    WARN(s"${" " * token.fp.column}^\n")
   }
 }

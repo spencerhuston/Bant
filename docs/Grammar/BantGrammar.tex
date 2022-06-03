@@ -153,9 +153,14 @@
 
 \begin{grammar}
 
-<caseVal> ::= <type>|<smp>
+<value> ::= <ident>`('[<value>[`,'<value>]]`)'
+\alt <prim>
+\alt `\_'
 
-<match> ::= `match' `('<smp>`)' `\{'`case' <caseVal>`=>' <smp>[`case' <caseVal> `=>' <smp>]*`\}'
+<caseVal> ::= <ident>`:'<type>
+\alt <value>
+
+<match> ::= `match'`('<smp>`)' `\{'`case'<caseVal>`=>'<smp>[`case'<caseVal>`=>'<smp>]*`\}'
 
 <matchSwitch> ::= <match> | <switch>
 

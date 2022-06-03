@@ -24,6 +24,8 @@ object PrettyPrinter {
                 case value: Val => value.toString
                 case exp: Exp => "\n" + astToString(exp, depth + 1)
                 case ab: ArrayBuffer[Exp] => ab.map(x => "\n" + astToString(x, depth + 1)).foldLeft("")(_ + _)
+                case cp: CasePattern => cp.toString
+                case vp: ValueCasePattern => vp.toString
               }
             }\n").foldLeft("")(_ + _)}" +
         s"${" " * depth})"
