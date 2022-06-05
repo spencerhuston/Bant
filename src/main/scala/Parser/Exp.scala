@@ -1,5 +1,6 @@
 package Parser
 
+import Lexer.SyntaxDefinitions.Delimiters
 import Lexer.Token
 import TypeChecker.{Type, UnknownType}
 
@@ -23,6 +24,7 @@ case class Let(token: Token,
                expValue: Exp,
                afterLet: Exp) extends Exp
 case class Prim(token: Token,
+                op: Delimiters.Value,
                 left: Exp,
                 right: Exp) extends Exp
 case class Ref(token: Token,
@@ -59,11 +61,17 @@ case class Typeclass(token: Token) extends Exp
 case class Instance(token: Token) extends Exp
 
 // Collections
-case class ListDef(token: Token) extends Exp
-case class ArrayDef(token: Token) extends Exp
-case class TupleDef(token: Token) extends Exp
-case class DictDef(token: Token) extends Exp
-case class SetDef(token: Token) extends Exp
+case class ListDef(token: Token,
+                   values: ArrayBuffer[Exp]) extends Exp
+case class ArrayDef(token: Token,
+                    values: ArrayBuffer[Exp]) extends Exp
+case class SetDef(token: Token,
+                  values: ArrayBuffer[Exp]) extends Exp
+case class TupleDef(token: Token,
+                    values: ArrayBuffer[Exp]) extends Exp
+case class DictDef(token: Token,
+                   keys: ArrayBuffer[Exp],
+                   values: ArrayBuffer[Exp]) extends Exp
 case class BlockGet(token: Token) extends Exp
 
 // Pattern Matching

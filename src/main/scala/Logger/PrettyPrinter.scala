@@ -1,10 +1,11 @@
 package Logger
 
+import Lexer.Delimiter
+import Lexer.SyntaxDefinitions.Delimiters
 import Parser._
 import TypeChecker.Type
 
 import scala.collection.mutable.ArrayBuffer
-
 import scala.Console.{RESET, YELLOW}
 
 object PrettyPrinter {
@@ -26,6 +27,7 @@ object PrettyPrinter {
                 case ab: ArrayBuffer[Exp] => ab.map(x => "\n" + astToString(x, depth + 1)).foldLeft("")(_ + _)
                 case cp: CasePattern => cp.toString
                 case vp: ValueCasePattern => vp.toString
+                case d: Delimiters.Value => d.toString
               }
             }\n").foldLeft("")(_ + _)}" +
         s"${" " * depth})"
