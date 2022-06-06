@@ -35,8 +35,8 @@ object Delimiters extends Enumeration {
   val RETURN_TYPE: Delimiters.Value = Value("->")
   val CASE_EXP: Delimiters.Value = Value("=>")
   val ASSIGNMENT: Delimiters.Value = Value("=")
-  val SUBSET: Delimiters.Value = Value(":>")
-  val SUPERSET: Delimiters.Value = Value("<:")
+  val LOWER_BOUND: Delimiters.Value = Value(":>")
+  val UPPER_BOUND: Delimiters.Value = Value("<:")
   val BIRD: Delimiters.Value = Value("|>")
   val LAMBDA: Delimiters.Value = Value("\\")
 

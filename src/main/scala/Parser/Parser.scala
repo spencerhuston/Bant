@@ -401,28 +401,91 @@ object Parser {
     none
   }
 
-  // TODO
   def parseProg: Exp = {
     LOG(DEBUG, s"parseProg: $curr")
-    none
+    val token = getToken
+    val funcs = ArrayBuffer[FunDef]()
+    while (matchOptional(FN)) {
+      funcs += parseFunDef
+    }
+    Prog(token, funcs)
   }
 
-  // TODO
   def parseFunDef: FunDef = {
     LOG(DEBUG, s"parseFunDef: $curr")
-    ???
+    val token = getToken
+    val ident = matchIdent
+    val genericTypes = ArrayBuffer[Generic]()
+
+    if (matchOptional(LEFT_BRACKET)) {
+      while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET)) {
+        val genericType = matchIdent
+        var lowerBoundType = ""
+        var upperBoundType = ""
+
+        if (matchOptional(LOWER_BOUND)) {
+          lowerBoundType = matchIdent
+        }
+        if (matchOptional(UPPER_BOUND)) {
+          upperBoundType = matchIdent
+        }
+        genericTypes += Generic(genericType, lowerBoundType, upperBoundType)
+      }
+    }
+    matchRequired(LEFT_PAREN)
+    val params = ArrayBuffer[Parameter]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN)) {
+      params += parseParameter
+    }
+
+    var returnType: Type = UnknownType()
+    if (matchOptional(RETURN_TYPE))
+      returnType = parseType
+
+    matchRequired(ASSIGNMENT)
+    val body = parseSimpleExp
+
+    FunDef(token, ident, genericTypes, params, returnType, body)
   }
 
-  // TODO
-  def parseArg: Arg = {
+  def parseParameter: Parameter = {
     LOG(DEBUG, s"parseArg: $curr")
-    ???
+    val token = getToken
+    val ident = matchIdent
+    matchRequired(COLON)
+    val paramType = parseType
+
+    var defaultVal: Exp = none
+    if (matchOptional(ASSIGNMENT))
+      defaultVal = parseAtom
+
+    Parameter(token, ident, paramType, defaultVal)
   }
 
   // TODO
   def parseLambda: Exp = {
     LOG(DEBUG, s"parseLambda: $curr")
-    none
+    val token = getToken
+    matchRequired(LAMBDA)
+    val ident = anon
+    val params = ArrayBuffer[Parameter]()
+    while (matchOptional(COMMA) || !matchOptional(LAMBDA)) {
+      params += parseParameter
+    }
+
+    var returnType: Type = UnknownType()
+    if (matchOptional(RETURN_TYPE))
+      returnType = parseType
+
+    matchRequired(ASSIGNMENT)
+    val body = parseExp
+
+    Let(token,
+        isLazy = false,
+        ident,
+        UnknownType(),
+        FunDef(token, ident + "_def", ArrayBuffer[Generic](), params, returnType, body),
+        Ref(token, ident + "_def"))
   }
 
   def parseUtight(min: Int): Exp = {
@@ -604,7 +667,7 @@ object Parser {
   }
 
   def anon: String = {
-    val anonIdent = s"dummy$$$anonCount"
+    val anonIdent = s"anon$$$anonCount"
     anonCount += 1
     anonIdent
   }

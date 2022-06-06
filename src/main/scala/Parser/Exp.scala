@@ -48,10 +48,19 @@ case class NullVal() extends Val
 // Functions
 case class Prog(token: Token,
                 funcs: ArrayBuffer[FunDef]) extends Exp
-case class FunDef(token: Token) extends Exp
-case class Arg(token: Token) extends Exp
+case class FunDef(token: Token,
+                  ident: String,
+                  generics: ArrayBuffer[Generic],
+                  params: ArrayBuffer[Parameter],
+                  returnType: Type,
+                  body: Exp) extends Exp
+case class Generic(ident: String, lowerBound: String, upperBound: String)
+case class Parameter(token: Token,
+                     ident: String,
+                     paramType: Type,
+                     default: Exp) extends Exp
 case class Lambda(token: Token,
-                  args: ArrayBuffer[Arg],
+                  params: ArrayBuffer[Parameter],
                   body: Exp) extends Exp
 case class App(token: Token) extends Exp
 

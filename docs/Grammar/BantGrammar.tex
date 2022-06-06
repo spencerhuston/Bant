@@ -129,9 +129,9 @@
 
 \begin{grammar}
 
-<arg> ::= <ident>`:'<type>[`='<atom>]
+<param> ::= <ident>`:'<type>[`='<atom>]
 
-<lowerBoundOp> ::= `>:'
+<lowerBoundOp> ::= `:>'
 
 <upperBoundOp> ::= `<:'
 
@@ -139,13 +139,13 @@
 
 <templateTypes> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
 
-<funDef> ::= `fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp><terminator>
+<funDef> ::= `fn' <ident>[<templateTypes>]`('[<param> [`,' <param>]* ]`)'[`->'<type>]`='<smp><terminator>
 
 <prog> ::= [<funDef>]*
 
 <app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
 
-<anonLmbd> ::= `\\'<arg>[`->'<type>]`='<smp>
+<anonLmbd> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp>
 
 \end{grammar}
 
