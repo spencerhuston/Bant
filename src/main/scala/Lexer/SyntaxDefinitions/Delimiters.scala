@@ -23,7 +23,7 @@ object Delimiters extends Enumeration {
     NOT, NOT_EQUAL, EQUAL, AND, OR)
 
   val COLON: Delimiters.Value = Value(":")
-  val SEMI_COLON: Delimiters.Value = Value(";")
+  val STATEMENT_END: Delimiters.Value = Value(";")
   val COMMA: Delimiters.Value = Value(",")
   val ACCESS: Delimiters.Value = Value(".")
   val LEFT_PAREN: Delimiters.Value = Value("(")
@@ -38,7 +38,7 @@ object Delimiters extends Enumeration {
   val LOWER_BOUND: Delimiters.Value = Value(":>")
   val UPPER_BOUND: Delimiters.Value = Value("<:")
   val BIRD: Delimiters.Value = Value("|>")
-  val LAMBDA: Delimiters.Value = Value("\\")
+  val LAMBDA: Delimiters.Value = Value("|")
 
   def getValue(str: String): Option[Delimiters.Value] = {
     values.find(_.toString == str) match {

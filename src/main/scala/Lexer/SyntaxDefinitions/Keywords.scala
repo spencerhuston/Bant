@@ -7,6 +7,7 @@ object Keywords extends Enumeration {
   val TYPE: Keywords.Value = Value("type")
   val TYPECLASS: Keywords.Value = Value("typeclass")
   val INSTANCE: Keywords.Value = Value("instance")
+  val THIS: Keywords.Value = Value("this")
   val INT: Keywords.Value = Value("int")
   val BOOL: Keywords.Value = Value("bool")
   val CHAR: Keywords.Value = Value("char")

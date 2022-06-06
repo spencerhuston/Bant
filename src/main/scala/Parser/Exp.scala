@@ -47,7 +47,8 @@ case class NullVal() extends Val
 
 // Functions
 case class Prog(token: Token,
-                funcs: ArrayBuffer[FunDef]) extends Exp
+                funcs: ArrayBuffer[FunDef],
+                body: Exp) extends Exp
 case class FunDef(token: Token,
                   ident: String,
                   generics: ArrayBuffer[Generic],
@@ -67,7 +68,10 @@ case class App(token: Token) extends Exp
 // ADT
 case class Adt(token: Token) extends Exp
 case class Typeclass(token: Token) extends Exp
-case class Instance(token: Token) extends Exp
+case class Instance(token: Token,
+                    adt: Ref,
+                    typeclass: Ref,
+                    funcs: ArrayBuffer[FunDef]) extends Exp
 
 // Collections
 case class ListDef(token: Token,

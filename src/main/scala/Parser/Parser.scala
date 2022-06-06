@@ -30,23 +30,14 @@ object Parser {
       })
   }
 
-  def skipTerminator(): Unit = {
-    while (matchTerminator)
-      ()
-  }
-
-  def getToken: Token = {
-    skipTerminator()
-    curr
-  }
-
   def matchRequired[T <: Enumeration#Value](value: T): Boolean = {
-    skipTerminator()
     val matched = curr match {
       case Keyword(keywordValue, _, _) =>
         keywordValue == value
       case Delimiter(delimValue, _, _) =>
         delimValue == value
+      case Terminator(semi, _) =>
+        semi == value.toString
       case _ =>
         false
     }
@@ -59,12 +50,13 @@ object Parser {
   }
 
   def matchOptional[T <: Enumeration#Value](value: T): Boolean = {
-    skipTerminator()
     val matched = curr match {
       case Keyword(keywordValue, _, _) =>
         keywordValue == value
       case Delimiter(delimValue, _, _) =>
         delimValue == value
+      case Terminator(_, _) =>
+        value.toString == ";"
       case _ => false
     }
 
@@ -89,32 +81,13 @@ object Parser {
       false
   }
 
-  def matchTerminator: Boolean = {
-    val matched = curr match {
-      case Terminator(_, _) => true
-      case Delimiter(delim, _, _) if delim.toString == ";" => true
-      case _ => false
-    }
-
-    if (matched)
-      advance()
-
-    matched
-  }
-
   def matchIdent: String = {
-    skipTerminator()
     if (!curr.isInstanceOf[Ident]) {
       reportBadMatch(curr, "<ident>")
       return ""
     }
 
     val ident = curr.tokenText
-
-    if (ident == "_") {
-      ERROR(s"Error: _ reserved for matches and lambdas")
-      reportLine(curr)
-    }
 
     advance()
     ident
@@ -138,7 +111,6 @@ object Parser {
 
   def parse(tokens: ArrayBuffer[Token]): Exp = {
     tokenStream = tokens
-    skipTerminator()
 
     try {
       parseExp
@@ -156,21 +128,19 @@ object Parser {
         case Keyword(VAL, _, _) => parseLet
         case Keyword(LAZY, _, _) => parseLet
         case Keyword(INCLUDE, _, _) => parseInclude
-        case _ => {
+        case _ =>
           val smp = parseSimpleExp
-          if (matchTerminator) {
-            skipTerminator()
+          if (matchOptional(STATEMENT_END)) {
             Let(smp.token, isLazy = false, dummy, smp.expType, smp, parseExp)
           } else {
             smp
           }
-        }
       }
   }
 
   def parseLet: Exp = {
     LOG(DEBUG, s"parseLet: $curr")
-    val token = getToken
+    val token = curr
     val isLazy = matchOptional(LAZY)
     matchRequired(VAL)
     val ident = matchIdent
@@ -183,10 +153,8 @@ object Parser {
     val expValue: Exp = parseSimpleExp
 
     var afterExp: Exp = none
-    if (matchTerminator) {
-      skipTerminator()
+    if (matchOptional(STATEMENT_END))
       afterExp = parseExp
-    }
 
     Let(token, isLazy, ident, letType, expValue, afterExp)
   }
@@ -199,7 +167,6 @@ object Parser {
 
   def parseSimpleExp: Exp = {
     LOG(DEBUG, s"parseSimpleExp: $curr")
-    skipTerminator()
     curr match {
         case Keyword(IF, _, _) => parseBranch
         case Keyword(LIST, _, _) => parseCollectionValue
@@ -213,13 +180,14 @@ object Parser {
         case Keyword(TYPE, _, _) => parseAdt
         case Keyword(FN, _, _) => parseProg
         case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
+        case Delimiter(Delimiters.OR, _, _) => parseLambda
         case _ => parseUtight(0)
       }
   }
 
   def parseBranch: Exp = {
     LOG(DEBUG, s"parseBranch: $curr")
-    val token = getToken
+    val token = curr
     matchRequired(IF)
     matchRequired(LEFT_PAREN)
     val condition = parseSimpleExp
@@ -235,7 +203,7 @@ object Parser {
 
   def parseCollectionValue: Exp = {
     LOG(DEBUG, s"parseCollectionValue: $curr")
-    val token = getToken
+    val token = curr
     curr match {
       case Keyword(LIST, _, _) =>
         advance()
@@ -243,6 +211,7 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
+        matchRequired(STATEMENT_END)
         ListDef(token, values)
       case Keyword(ARRAY, _, _) =>
         advance()
@@ -250,6 +219,7 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
+        matchRequired(STATEMENT_END)
         ArrayDef(token, values)
       case Keyword(SET, _, _) =>
         advance()
@@ -257,6 +227,7 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
+        matchRequired(STATEMENT_END)
         SetDef(token, values)
       case Keyword(TUPLE, _, _) =>
         advance()
@@ -264,6 +235,7 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
+        matchRequired(STATEMENT_END)
         TupleDef(token, values)
       case Keyword(DICT, _, _) =>
         advance()
@@ -275,6 +247,7 @@ object Parser {
           matchRequired(COLON)
           values += parseSimpleExp
         }
+        matchRequired(STATEMENT_END)
         DictDef(token, keys, values)
     }
   }
@@ -282,27 +255,28 @@ object Parser {
   def parseMatch: Exp = {
     LOG(DEBUG, s"parseMatch: $curr")
 
-    val matchToken = getToken
+    val matchToken = curr
     matchRequired(MATCH)
     matchRequired(LEFT_PAREN)
     val matchVal = parseSimpleExp
     matchRequired(RIGHT_PAREN)
 
     matchRequired(LEFT_BRACE)
+    matchRequired(CASE)
     val cases = ArrayBuffer[Case](parseCase)
 
-    while (!peek(RIGHT_BRACE))
+    while (matchOptional(CASE))
       cases += parseCase
 
     warnAnyCase(cases)
 
     matchRequired(RIGHT_BRACE)
+    matchRequired(STATEMENT_END)
     Match(matchToken, matchVal, cases)
   }
 
   def parseCase: Case = {
-    matchRequired(CASE)
-    val caseToken = getToken
+    val caseToken = curr
     val casePattern = parseCasePattern
     matchRequired(CASE_EXP)
     val caseExp = parseSimpleExp
@@ -339,7 +313,7 @@ object Parser {
 
         ConstructorCase(ident, values)
       case _ =>
-        val token = getToken
+        val token = curr
         parsePrim match {
           case NoOp(_) =>
             reportBadMatch(token, "<primitive>")
@@ -385,14 +359,19 @@ object Parser {
   // TODO
   def parseInstance: Exp = {
     LOG(DEBUG, s"parseInstance: $curr")
+    val token = curr
     matchRequired(INSTANCE)
-    val adtIdent = matchIdent // TODO
+    val adtIdent = Ref(curr, matchIdent)
     matchRequired(COLON)
-    val typeclassIdent = matchIdent // TODO
+    val typeclassIdent = Ref(curr, matchIdent)
     matchRequired(LEFT_BRACE)
-    val prog = parseProg
+    val funcs = ArrayBuffer[FunDef]()
+    while (matchOptional(FN)) {
+      funcs += parseFunDef
+    }
     matchRequired(RIGHT_BRACE)
-    ???
+    matchRequired(STATEMENT_END)
+    Instance(token, adtIdent, typeclassIdent, funcs)
   }
 
   // TODO
@@ -401,19 +380,19 @@ object Parser {
     none
   }
 
-  def parseProg: Exp = {
+  def parseProg: Prog = {
     LOG(DEBUG, s"parseProg: $curr")
-    val token = getToken
+    val token = curr
     val funcs = ArrayBuffer[FunDef]()
     while (matchOptional(FN)) {
       funcs += parseFunDef
     }
-    Prog(token, funcs)
+    Prog(token, funcs, parseExp)
   }
 
   def parseFunDef: FunDef = {
     LOG(DEBUG, s"parseFunDef: $curr")
-    val token = getToken
+    val token = curr
     val ident = matchIdent
     val genericTypes = ArrayBuffer[Generic]()
 
@@ -444,13 +423,14 @@ object Parser {
 
     matchRequired(ASSIGNMENT)
     val body = parseSimpleExp
+    matchOptional(STATEMENT_END)
 
     FunDef(token, ident, genericTypes, params, returnType, body)
   }
 
   def parseParameter: Parameter = {
     LOG(DEBUG, s"parseArg: $curr")
-    val token = getToken
+    val token = curr
     val ident = matchIdent
     matchRequired(COLON)
     val paramType = parseType
@@ -462,14 +442,19 @@ object Parser {
     Parameter(token, ident, paramType, defaultVal)
   }
 
-  // TODO
   def parseLambda: Exp = {
     LOG(DEBUG, s"parseLambda: $curr")
-    val token = getToken
-    matchRequired(LAMBDA)
+    val token = curr
+    var emptyParams = false
+
+    if (matchOptional(OR)) {
+      emptyParams = true
+    } else
+      matchOptional(LAMBDA)
+
     val ident = anon
     val params = ArrayBuffer[Parameter]()
-    while (matchOptional(COMMA) || !matchOptional(LAMBDA)) {
+    while (!emptyParams && (matchOptional(COMMA) || !matchOptional(LAMBDA))) {
       params += parseParameter
     }
 
@@ -503,8 +488,8 @@ object Parser {
 
   def parseUtight: Exp = {
     LOG(DEBUG, s"parseUtight: $curr")
-    val token = getToken
-    var op = SEMI_COLON
+    val token = curr
+    var op = STATEMENT_END
     if (matchOptional(NOT))
       op = NOT
     else if (matchOptional(MINUS))
@@ -571,7 +556,6 @@ object Parser {
           advance()
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
-      case Terminator(_, _) => none
       case _ =>
         reportUnexpected(curr)
         none
@@ -685,7 +669,7 @@ object Parser {
   }
 
   def reportUnexpected(token: Token): Unit = {
-    ERROR(s"Unexpected : ${token.tokenText}")
+    ERROR(s"Unexpected: ${token.tokenText}")
     reportLine(token)
   }
 

@@ -251,7 +251,7 @@ object Lexer {
             skipLine()
           else if (isNewline) {
             addToken(Terminator(curr.toString.replace("\n", "\\n")))
-            newline
+            newline()
           }
           else if (isSemicolon) {
             addToken(Terminator(";"))
@@ -273,6 +273,44 @@ object Lexer {
     else addToken(EOF())
   }
 
+  def removeStartingNewlines(tokenStream: ArrayBuffer[Token]): ArrayBuffer[Token] = {
+    tokenStream.takeRight(tokenStream.length - tokenStream.indexWhere(t => t match {
+      case Terminator(_, _) => false
+      case _ => true
+    }))
+  }
+
+  @tailrec
+  def parseNewlines(tokenStream: ArrayBuffer[Token], parseIndex: Int = 0): ArrayBuffer[Token] = {
+    tokenStream(parseIndex) match {
+      case Terminator(t, fp) if t == "\\n" =>
+        tokenStream(parseIndex - 1) match {
+          case Delimiter(d, _, _)
+            if d == Delimiters.RIGHT_BRACE || d == Delimiters.RIGHT_PAREN =>
+              tokenStream(parseIndex) = Terminator(";", fp)
+              parseNewlines(tokenStream, parseIndex + 1)
+          case Value(_, _) | Ident(_, _) =>
+            tokenStream(parseIndex + 1) match {
+              case Delimiter(d, _, _)
+                if d == Delimiters.RIGHT_BRACE || d == Delimiters.RIGHT_PAREN =>
+                tokenStream.remove(parseIndex)
+                parseNewlines(tokenStream, parseIndex)
+              case Keyword(k, _, _) if k == Keywords.CASE =>
+                tokenStream.remove(parseIndex)
+                parseNewlines(tokenStream, parseIndex)
+              case _ =>
+                tokenStream(parseIndex) = Terminator(";", fp)
+                parseNewlines(tokenStream, parseIndex + 1)
+            }
+          case _ =>
+            tokenStream.remove(parseIndex)
+            parseNewlines(tokenStream, parseIndex)
+        }
+      case EOF(_, _) => tokenStream
+      case _ => parseNewlines(tokenStream, parseIndex + 1)
+    }
+  }
+
   def scan(sourceString: String): ArrayBuffer[Token] = {
     var tmpSourceString = sourceString.replace("\r", "")
     if (tmpSourceString.endsWith("\n"))
@@ -282,6 +320,7 @@ object Lexer {
     lineList = position.source.split("\n")
     scanHelper()
 
+    tokenStream = parseNewlines(removeStartingNewlines(tokenStream))
     var tokenStreamStringList = ""
     tokenStream.foreach(tokenStreamStringList += _ + "\n")
     LOG_HEADER("TOKENS", tokenStreamStringList)

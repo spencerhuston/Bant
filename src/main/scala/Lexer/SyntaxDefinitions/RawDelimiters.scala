@@ -5,7 +5,6 @@ object RawDelimiters extends Enumeration {
   val HYPHEN: RawDelimiters.Value = Value("-")
   val STAR: RawDelimiters.Value = Value("*")
   val FORWARD_SLASH: RawDelimiters.Value = Value("/")
-  val BACK_SLASH: RawDelimiters.Value = Value("\\")
   val PERCENT: RawDelimiters.Value = Value("%")
   val LEFT_ARROW: RawDelimiters.Value = Value("<")
   val RIGHT_ARROW: RawDelimiters.Value = Value(">")
