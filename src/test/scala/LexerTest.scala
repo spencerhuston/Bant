@@ -55,16 +55,16 @@ class LexerTest extends AnyFlatSpec {
   "Lexer.isTerminator" should "return true if curr is terminator" in {
     Lexer.clear()
     Lexer.position.source = ";"
-    assert(Lexer.isTerminator)
+    assert(Lexer.isSemicolon)
 
     Lexer.position.source = "\n"
-    assert(Lexer.isTerminator)
+    assert(Lexer.isNewline)
   }
 
   it should "return false if curr is not terminator" in {
     Lexer.clear()
     Lexer.position.source = "c"
-    assert(!Lexer.isTerminator)
+    assert(!Lexer.isNewline && !Lexer.isSemicolon)
   }
 
   "Lexer.isWhitespace" should "return true if curr is whitespace" in {
@@ -221,7 +221,7 @@ class LexerTest extends AnyFlatSpec {
   "Lexer.scan and Lexer.scanHelper" should "make entire tokenStream" in {
     Lexer.clear()
     Lexer.scan("val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }\n\nforeach[Residence](residences, (r: Residence) => r.printDimensions())\n\nval house = House(3, 2)\n\nval optHouse: Option[House] = house match {\n    case House(bed, bath) => Some(House(bed, bath))\n    case _ => None\n}")
-    assert(Lexer.tokenStream.size == 102)
+    assert(Lexer.tokenStream.size == 97)
   }
 
   "Lexer.clear" should "clear all Lexer & Position vars" in {
@@ -369,9 +369,9 @@ class LexerTest extends AnyFlatSpec {
 
     println(Lexer.position.curr)
 
-    Lexer.position.newline(true)
+    Lexer.position.newline()
 
-    assert(Lexer.position.index == 6 &&
+    assert(Lexer.position.index == 5 &&
       Lexer.position.lineNumber == 3 &&
       Lexer.position.columnNumber == 0 &&
       Lexer.position.lineText == "")

@@ -1,5 +1,4 @@
 import org.scalatest.flatspec.AnyFlatSpec
-
 import BantRunner.CmdLineParser.parseCmdLine
 import BantRunner.FileReader.readBantSource
 import BantRunner.Main
@@ -80,5 +79,25 @@ class BantRunnerTest extends AnyFlatSpec {
 
   it should "fail on a bad source file" in {
     assert(Main.getSource(Array("-f", "test.bnt")).isEmpty)
+  }
+
+  "Logger.PrettyPrinter.astToString" should "give an ast back as a string" in {
+    val exp = Parser.Lit(
+      Lexer.Value("0", Lexer.FilePosition(0, 0, "0")), Parser.IntVal(0))
+    assert(Logger.PrettyPrinter.astToString(exp) ==
+      s"Lit(\n ${scala.Console.YELLOW}value${scala.Console.RESET}: IntVal(0)\n)")
+  }
+
+  "Logger.LOG" should "print logs" in {
+    Logger.Logger.LOG(Logger.Level.INFO, "test")
+    Logger.Logger.LOG(Logger.Level.WARN, "test")
+    Logger.Logger.LOG(Logger.Level.ERROR, "test")
+    Logger.Logger.LOG(Logger.Level.DEBUG, "test")
+    Logger.Logger.LOG(Logger.Level.INFO, "test", "test2")
+  }
+
+  "Logger.LOG_HEADER" should "print logs with header" in {
+    Logger.Logger.setLevel("DEBUG")
+    Logger.Logger.LOG_HEADER("title", "test")
   }
 }
