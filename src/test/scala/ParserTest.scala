@@ -3,7 +3,7 @@ import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Token}
 import Logger.Logger.lineList
-import Parser.{BoolVal, Branch, IntVal, Let, Lit, NoOp, NullVal, Ref}
+import Parser.{AnyCase, ArrayDef, BoolVal, Branch, CharVal, DictDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Ref, SetDef, TupleDef, ValueCase}
 import Parser.Parser._
 import TypeChecker.{IntType, UnknownType}
 
@@ -21,6 +21,15 @@ class ParserTest extends AnyFlatSpec {
   }
 
   def fp: FilePosition = FilePosition(0, 0, "val")
+
+  def getExp(path: String): Parser.Exp = {
+    clear()
+    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
+      case Some(source) =>
+        Lexer.Lexer.scan(source)
+    }
+    parse(ts)
+  }
 
   "Parser.curr" must "give the current token" in {
     clear()
@@ -161,14 +170,7 @@ class ParserTest extends AnyFlatSpec {
   }
 
   "Parser.parseExp" must "return simplest let when given tokens" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/let_test.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/let_test.bnt")
     assert(exp.isInstanceOf[Let])
     val let = exp.asInstanceOf[Let]
     assert(!let.isLazy)
@@ -181,14 +183,7 @@ class ParserTest extends AnyFlatSpec {
   }
 
   it must "return let with annotations" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/let_test2.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/let_test2.bnt")
     assert(exp.isInstanceOf[Let])
     val let = exp.asInstanceOf[Let]
     assert(let.isLazy)
@@ -201,28 +196,14 @@ class ParserTest extends AnyFlatSpec {
   }
 
   it must "return lit" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/lit_test.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/lit_test.bnt")
     assert(exp.isInstanceOf[Lit])
     val lit = exp.asInstanceOf[Lit]
     assert(lit.value == IntVal(5))
   }
 
   "Parser.parseLet" must "return simplest let when given tokens" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/let_test.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/let_test.bnt")
     assert(exp.isInstanceOf[Let])
     val let = exp.asInstanceOf[Let]
     assert(!let.isLazy)
@@ -235,14 +216,7 @@ class ParserTest extends AnyFlatSpec {
   }
 
   it must "return let with annotations" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/let_test2.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/let_test2.bnt")
     assert(exp.isInstanceOf[Let])
     val let = exp.asInstanceOf[Let]
     assert(let.isLazy)
@@ -255,14 +229,7 @@ class ParserTest extends AnyFlatSpec {
   }
 
   "Parser.parseBranch" must "return branch exp" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/branch_test.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/branch_test.bnt")
     assert(exp.isInstanceOf[Branch])
     val branch = exp.asInstanceOf[Branch]
     print(branch)
@@ -275,14 +242,7 @@ class ParserTest extends AnyFlatSpec {
   }
 
   it must "return branch exp with nullval elseBranch if else dne" in {
-    clear()
-    val path = "src/test/testPrograms/ParserPrograms/branch_test2.bnt"
-    val ts = BantRunner.Main.getSource(Array[String]("-f", path)) match {
-      case Some(source) =>
-        Lexer.Lexer.scan(source)
-    }
-
-    val exp = parse(ts)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/branch_test2.bnt")
     assert(exp.isInstanceOf[Branch])
     val branch = exp.asInstanceOf[Branch]
     print(branch)
@@ -292,6 +252,73 @@ class ParserTest extends AnyFlatSpec {
       branch.ifBranch.asInstanceOf[Lit].value == IntVal(5))
     assert(branch.elseBranch.isInstanceOf[Lit] &&
       branch.elseBranch.asInstanceOf[Lit].value == NullVal())
+  }
+
+  "Parser.parseCollectionValue" should "parse List collection" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/list_test.bnt")
+    assert(exp.isInstanceOf[ListDef])
+    val list = exp.asInstanceOf[ListDef]
+    assert(list.values.length == 1)
+    assert(list.values(0).isInstanceOf[Lit] &&
+      list.values(0).asInstanceOf[Lit].value == IntVal(1))
+  }
+
+  it should "parse Array collection" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/array_test.bnt")
+    assert(exp.isInstanceOf[ArrayDef])
+    val array = exp.asInstanceOf[ArrayDef]
+    assert(array.values.length == 1)
+    assert(array.values(0).isInstanceOf[Lit] &&
+      array.values(0).asInstanceOf[Lit].value == IntVal(1))
+  }
+
+  it should "parse Set collection" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/set_test.bnt")
+    assert(exp.isInstanceOf[SetDef])
+    val set = exp.asInstanceOf[SetDef]
+    assert(set.values.length == 1)
+    assert(set.values(0).isInstanceOf[Lit] &&
+      set.values(0).asInstanceOf[Lit].value == IntVal(1))
+  }
+
+  it should "parse Tuple collection" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/tuple_test.bnt")
+    assert(exp.isInstanceOf[TupleDef])
+    val tuple = exp.asInstanceOf[TupleDef]
+    assert(tuple.values.length == 2)
+    assert(tuple.values(0).isInstanceOf[Lit] &&
+      tuple.values(0).asInstanceOf[Lit].value == IntVal(1))
+    assert(tuple.values(1).isInstanceOf[Lit] &&
+      tuple.values(1).asInstanceOf[Lit].value.toString == "CharVal('a')")
+  }
+
+  it should "parse Dict collection" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/dict_test.bnt")
+    assert(exp.isInstanceOf[DictDef])
+    val dict = exp.asInstanceOf[DictDef]
+    assert(dict.keys.length == 1)
+    assert(dict.keys(0).isInstanceOf[Lit] &&
+      dict.keys(0).asInstanceOf[Lit].value == IntVal(1))
+    assert(dict.values(0).isInstanceOf[Lit] &&
+      dict.values(0).asInstanceOf[Lit].value.toString == "CharVal('a')")
+  }
+
+  "Parser.parseMatch" should "make a pattern match exp" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/match_test.bnt")
+    assert(exp.isInstanceOf[Match])
+    val matchExp = exp.asInstanceOf[Match]
+    assert(matchExp.value.isInstanceOf[Ref] &&
+      matchExp.value.asInstanceOf[Ref].ident == "x")
+    assert(matchExp.cases.length == 2)
+    assert(matchExp.cases(0).casePattern.isInstanceOf[ValueCase] &&
+      matchExp.cases(0).casePattern.asInstanceOf[ValueCase].value == LitCase(IntVal(0)))
+    assert(matchExp.cases(0).caseExp.isInstanceOf[Lit] &&
+      matchExp.cases(0).caseExp.asInstanceOf[Lit].value == IntVal(1))
+
+    assert(matchExp.cases(1).casePattern.isInstanceOf[ValueCase] &&
+      matchExp.cases(1).casePattern.asInstanceOf[ValueCase].value == AnyCase())
+    assert(matchExp.cases(1).caseExp.isInstanceOf[Lit] &&
+      matchExp.cases(1).caseExp.asInstanceOf[Lit].value == IntVal(0))
   }
 
   "Parser.dummy" must "return dummy name" in {

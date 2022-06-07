@@ -306,7 +306,7 @@ object Lexer {
             tokenStream.remove(parseIndex)
             parseNewlines(tokenStream, parseIndex)
         }
-      case EOF(_, _) => tokenStream
+      case EOF(_, fp) => tokenStream
       case _ => parseNewlines(tokenStream, parseIndex + 1)
     }
   }

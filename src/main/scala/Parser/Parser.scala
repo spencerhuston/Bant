@@ -211,7 +211,6 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        matchRequired(STATEMENT_END)
         ListDef(token, values)
       case Keyword(ARRAY, _, _) =>
         advance()
@@ -219,7 +218,6 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        matchRequired(STATEMENT_END)
         ArrayDef(token, values)
       case Keyword(SET, _, _) =>
         advance()
@@ -227,7 +225,6 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        matchRequired(STATEMENT_END)
         SetDef(token, values)
       case Keyword(TUPLE, _, _) =>
         advance()
@@ -235,7 +232,6 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        matchRequired(STATEMENT_END)
         TupleDef(token, values)
       case Keyword(DICT, _, _) =>
         advance()
@@ -247,7 +243,6 @@ object Parser {
           matchRequired(COLON)
           values += parseSimpleExp
         }
-        matchRequired(STATEMENT_END)
         DictDef(token, keys, values)
     }
   }
