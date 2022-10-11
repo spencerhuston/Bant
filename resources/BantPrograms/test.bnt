@@ -1,3 +1,4 @@
-fn a() -> bool = { false };
-fn b() -> bool = { true }
-fn c() -> bool = { false }; fn d() -> bool = true
+match (x) {
+    case 0 => 1
+    case _ => 0
+}

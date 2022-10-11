@@ -46,13 +46,24 @@ object Parser {
     }
   }
 
-  def matchStatementEnd(): Unit = {
+  def matchStatementEndRequired(): Unit = {
     if ((index > 0 && isTerminator(tokenStream(index - 1))) && isTerminator(curr))
       advance()
     else if (isTerminator(curr))
       advance()
     else
       reportBadMatch(curr, "; or \\n")
+  }
+
+  def matchStatementEndOptional(): Boolean = {
+    if ((index > 0 && isTerminator(tokenStream(index - 1))) && isTerminator(curr)) {
+      advance()
+      true
+    } else if (isTerminator(curr)) {
+      advance()
+      true
+    } else
+      false
   }
 
   def matchRequired[T <: Enumeration#Value](value: T): Boolean = {
@@ -176,7 +187,7 @@ object Parser {
     val expValue: Exp = parseSimpleExp
 
     var afterExp: Exp = none
-    if (matchOptional(STATEMENT_END))
+    if (matchStatementEndOptional())
       afterExp = parseExp
 
     Let(token, isLazy, ident, letType, expValue, afterExp)
@@ -282,9 +293,12 @@ object Parser {
     matchRequired(LEFT_BRACE)
     matchRequired(CASE)
     val cases = ArrayBuffer[Case](parseCase)
+    skipSemicolon()
 
-    while (matchOptional(CASE))
+    while (matchOptional(CASE)) {
       cases += parseCase
+      skipSemicolon()
+    }
 
     warnAnyCase(cases)
 
@@ -440,7 +454,7 @@ object Parser {
 
     matchRequired(ASSIGNMENT)
     val body = parseSimpleExp
-    matchStatementEnd()
+    matchStatementEndRequired()
 
     FunDef(token, ident, genericTypes, params, returnType, body)
   }

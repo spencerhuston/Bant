@@ -1,7 +1,7 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
-import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Token}
+import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Terminator, Token}
 import Logger.Logger.lineList
 import Parser.{AnyCase, ArrayDef, BoolVal, Branch, CharVal, DictDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prog, Ref, SetDef, TupleDef, ValueCase}
 import Parser.Parser._
@@ -75,29 +75,28 @@ class ParserTest extends AnyFlatSpec {
 
   "Parser.matchRequired" must "return true if match is made and advance" in {
     clear()
-    tokenStream = ArrayBuffer[Token](Keyword(VAL, "val", fp))
+    tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(matchRequired(VAL) && index == 1)
+    assert(matchRequired(VAL) && index == 2)
   }
 
   it should "return false if match is not made" in {
     clear()
-    lineList = Array[String]("val")
-    tokenStream = ArrayBuffer[Token](Keyword(VAL, "val", FilePosition(0, 0, "val")))
+    tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(!matchRequired(LAZY) && index == 1 && errorOccurred)
+    assert(!matchRequired(LAZY) && index == 2 && errorOccurred)
   }
 
   "Parser.matchOptional" must "return true if match is made and advance" in {
     clear()
-    tokenStream = ArrayBuffer[Token](Keyword(VAL, "val", fp))
+    tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(matchOptional(VAL) && index == 1)
+    assert(matchOptional(VAL) && index == 2)
   }
 
   it should "return false if match is not made and not advance" in {
     clear()
-    tokenStream = ArrayBuffer[Token](Keyword(VAL, "val", FilePosition(0, 0, "val")))
+    tokenStream = Lexer.Lexer.scan("val")
     index = 0
     assert(!matchOptional(LAZY) && index == 0 && !errorOccurred)
   }
@@ -321,8 +320,22 @@ class ParserTest extends AnyFlatSpec {
       matchExp.cases(1).caseExp.asInstanceOf[Lit].value == IntVal(0))
   }
 
-  "Parser.parseSimpleGenericFunction" should "make a 1 polymorphic function program exp" in {
+  "Parser.parseSimpleGenericFunction" should "parse a 1 polymorphic function program exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/generic_func_test.bnt")
+    assert(exp.isInstanceOf[Prog])
+    val progExp = exp.asInstanceOf[Prog]
+    // TODO
+  }
+
+  "Parser.parseMatchInsideFuncDef" should "parse a match expression inside a function definition" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/match_inside_func_def_test.bnt")
+    assert(exp.isInstanceOf[Prog])
+    val progExp = exp.asInstanceOf[Prog]
+    // TODO
+  }
+
+  "Parser.parseSimpleGenericFunction" should "parse multiple function definitions with ambiguous linebreaks" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_parsing_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
     // TODO
