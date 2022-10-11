@@ -1,0 +1,2 @@
+fn f[T](x: int) -> int = x
+val h: int -> int = f

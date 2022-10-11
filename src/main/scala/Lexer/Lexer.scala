@@ -268,9 +268,15 @@ object Lexer {
         }
         scanHelper()
       }
-      else addToken(EOF())
+      else {
+        addToken(Terminator(";"))
+        addToken(EOF())
+      }
     }
-    else addToken(EOF())
+    else {
+      addToken(Terminator(";"))
+      addToken(EOF())
+    }
   }
 
   def removeStartingNewlines(tokenStream: ArrayBuffer[Token]): ArrayBuffer[Token] = {
@@ -284,28 +290,8 @@ object Lexer {
   def parseNewlines(tokenStream: ArrayBuffer[Token], parseIndex: Int = 0): ArrayBuffer[Token] = {
     tokenStream(parseIndex) match {
       case Terminator(t, fp) if t == "\\n" =>
-        tokenStream(parseIndex - 1) match {
-          case Delimiter(d, _, _)
-            if d == Delimiters.RIGHT_BRACE || d == Delimiters.RIGHT_PAREN =>
-              tokenStream(parseIndex) = Terminator(";", fp)
-              parseNewlines(tokenStream, parseIndex + 1)
-          case Value(_, _) | Ident(_, _) =>
-            tokenStream(parseIndex + 1) match {
-              case Delimiter(d, _, _)
-                if d == Delimiters.RIGHT_BRACE || d == Delimiters.RIGHT_PAREN =>
-                tokenStream.remove(parseIndex)
-                parseNewlines(tokenStream, parseIndex)
-              case Keyword(k, _, _) if k == Keywords.CASE =>
-                tokenStream.remove(parseIndex)
-                parseNewlines(tokenStream, parseIndex)
-              case _ =>
-                tokenStream(parseIndex) = Terminator(";", fp)
-                parseNewlines(tokenStream, parseIndex + 1)
-            }
-          case _ =>
-            tokenStream.remove(parseIndex)
-            parseNewlines(tokenStream, parseIndex)
-        }
+        tokenStream(parseIndex) = Terminator(";", fp)
+        parseNewlines(tokenStream, parseIndex + 1)
       case EOF(_, fp) => tokenStream
       case _ => parseNewlines(tokenStream, parseIndex + 1)
     }
@@ -328,11 +314,6 @@ object Lexer {
     tokenStream
   }
 
-  def clear(): Unit = {
-    position.clear()
-    tokenStream.clear()
-  }
-
   def reportInvalidCharacter(): Unit = {
     ERROR(s"Error: Invalid character: $curr")
     ERROR(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:\n")
@@ -346,5 +327,10 @@ object Lexer {
     WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:\n")
     WARN(s"${lineList(position.lineNumber)}")
     WARN(s"${" " * (position.columnNumber - ident.length)}^\n")
+  }
+
+  def clear(): Unit = {
+    position.clear()
+    tokenStream.clear()
   }
 }

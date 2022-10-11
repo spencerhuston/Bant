@@ -3,7 +3,7 @@ import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Token}
 import Logger.Logger.lineList
-import Parser.{AnyCase, ArrayDef, BoolVal, Branch, CharVal, DictDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Ref, SetDef, TupleDef, ValueCase}
+import Parser.{AnyCase, ArrayDef, BoolVal, Branch, CharVal, DictDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prog, Ref, SetDef, TupleDef, ValueCase}
 import Parser.Parser._
 import TypeChecker.{IntType, UnknownType}
 
@@ -319,6 +319,13 @@ class ParserTest extends AnyFlatSpec {
       matchExp.cases(1).casePattern.asInstanceOf[ValueCase].value == AnyCase())
     assert(matchExp.cases(1).caseExp.isInstanceOf[Lit] &&
       matchExp.cases(1).caseExp.asInstanceOf[Lit].value == IntVal(0))
+  }
+
+  "Parser.parseSimpleGenericFunction" should "make a 1 polymorphic function program exp" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/generic_func_test.bnt")
+    assert(exp.isInstanceOf[Prog])
+    val progExp = exp.asInstanceOf[Prog]
+    // TODO
   }
 
   "Parser.dummy" must "return dummy name" in {

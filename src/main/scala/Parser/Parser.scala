@@ -30,14 +30,37 @@ object Parser {
       })
   }
 
+  def skipSemicolon(): Unit = {
+    curr match {
+      case Terminator(_, _) => advance()
+      case Delimiter(delimValue, _, _) if delimValue == STATEMENT_END => advance()
+      case _ => ()
+    }
+  }
+
+  def isTerminator(token: Token): Boolean = {
+    token match {
+      case Terminator(_, _) => true
+      case Delimiter(delimValue, _, _) if delimValue == STATEMENT_END => true
+      case _ => false
+    }
+  }
+
+  def matchStatementEnd(): Unit = {
+    if ((index > 0 && isTerminator(tokenStream(index - 1))) && isTerminator(curr))
+      advance()
+    else if (isTerminator(curr))
+      advance()
+    else
+      reportBadMatch(curr, "; or \\n")
+  }
+
   def matchRequired[T <: Enumeration#Value](value: T): Boolean = {
     val matched = curr match {
       case Keyword(keywordValue, _, _) =>
         keywordValue == value
       case Delimiter(delimValue, _, _) =>
         delimValue == value
-      case Terminator(semi, _) =>
-        semi == value.toString
       case _ =>
         false
     }
@@ -46,6 +69,7 @@ object Parser {
       reportBadMatch(curr, value.toString)
 
     advance()
+    skipSemicolon()
     matched
   }
 
@@ -55,14 +79,13 @@ object Parser {
         keywordValue == value
       case Delimiter(delimValue, _, _) =>
         delimValue == value
-      case Terminator(_, _) =>
-        value.toString == ";"
       case _ => false
     }
 
     if (matched)
       advance()
 
+    skipSemicolon()
     matched
   }
 
@@ -266,7 +289,6 @@ object Parser {
     warnAnyCase(cases)
 
     matchRequired(RIGHT_BRACE)
-    matchRequired(STATEMENT_END)
     Match(matchToken, matchVal, cases)
   }
 
@@ -387,6 +409,7 @@ object Parser {
 
   def parseFunDef: FunDef = {
     LOG(DEBUG, s"parseFunDef: $curr")
+
     val token = curr
     val ident = matchIdent
     val genericTypes = ArrayBuffer[Generic]()
@@ -412,13 +435,12 @@ object Parser {
       params += parseParameter
     }
 
-    var returnType: Type = UnknownType()
-    if (matchOptional(RETURN_TYPE))
-      returnType = parseType
+    matchRequired(RETURN_TYPE)
+    val returnType = parseType
 
     matchRequired(ASSIGNMENT)
     val body = parseSimpleExp
-    matchOptional(STATEMENT_END)
+    matchStatementEnd()
 
     FunDef(token, ident, genericTypes, params, returnType, body)
   }
@@ -551,6 +573,7 @@ object Parser {
           advance()
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
+      case EOF(_, _) => none
       case _ =>
         reportUnexpected(curr)
         none
