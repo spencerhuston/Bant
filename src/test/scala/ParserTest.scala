@@ -3,9 +3,9 @@ import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Terminator, Token}
 import Logger.Logger.lineList
-import Parser.{AnyCase, ArrayDef, BoolVal, Branch, CharVal, DictDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prog, Ref, SetDef, TupleDef, ValueCase}
+import Parser.{AnyCase, ArrayDef, BoolVal, Branch, Case, CharVal, DictDef, FunDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prog, Ref, SetDef, TupleDef, ValueCase}
 import Parser.Parser._
-import TypeChecker.{IntType, UnknownType}
+import TypeChecker.{BoolType, FuncType, IntType, UnknownType}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -168,6 +168,28 @@ class ParserTest extends AnyFlatSpec {
     assert(getPrecedence(GREATER_THAN) == 1)
   }
 
+  "Parser.dummyLet" must "return nested dummy lets" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/dummy_let_test.bnt")
+    assert(exp.isInstanceOf[Let])
+    val let = exp.asInstanceOf[Let]
+    assert(!let.isLazy)
+    assert(let.ident == "dummy$1")
+    assert(let.letType == IntType())
+    assert(let.expType == UnknownType())
+    assert(let.expValue.isInstanceOf[Lit])
+    assert(let.expValue.asInstanceOf[Lit].value == IntVal(2))
+    assert(let.afterLet.isInstanceOf[Let])
+
+    val let2 = let.afterLet.asInstanceOf[Let]
+    assert(!let2.isLazy)
+    assert(let2.ident == "dummy$0")
+    assert(let2.letType == IntType())
+    assert(let2.expType == UnknownType())
+    assert(let2.expValue.isInstanceOf[Lit])
+    assert(let2.expValue.asInstanceOf[Lit].value == IntVal(3))
+    assert(let2.afterLet.isInstanceOf[NoOp])
+  }
+
   "Parser.parseExp" must "return simplest let when given tokens" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/let_test.bnt")
     assert(exp.isInstanceOf[Let])
@@ -192,6 +214,28 @@ class ParserTest extends AnyFlatSpec {
     assert(let.expValue.isInstanceOf[Lit])
     assert(let.expValue.asInstanceOf[Lit].value == IntVal(0))
     assert(let.afterLet.isInstanceOf[Let])
+  }
+
+  it must "return nested let in let" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/let_test3.bnt")
+    assert(exp.isInstanceOf[Let])
+    val let = exp.asInstanceOf[Let]
+    assert(!let.isLazy)
+    assert(let.ident == "a")
+    assert(let.letType == UnknownType())
+    assert(let.expType == UnknownType())
+    assert(let.expValue.isInstanceOf[Lit])
+    assert(let.expValue.asInstanceOf[Lit].value == IntVal(5))
+    assert(let.afterLet.isInstanceOf[Let])
+
+    val let2 = let.afterLet.asInstanceOf[Let]
+    assert(!let2.isLazy)
+    assert(let2.ident == "b")
+    assert(let2.letType == UnknownType())
+    assert(let2.expType == UnknownType())
+    assert(let2.expValue.isInstanceOf[Lit])
+    assert(let2.expValue.asInstanceOf[Lit].value == IntVal(2))
+    assert(let2.afterLet.isInstanceOf[NoOp])
   }
 
   it must "return lit" in {
@@ -326,28 +370,81 @@ class ParserTest extends AnyFlatSpec {
     val exp = getExp("src/test/testPrograms/ParserPrograms/generic_func_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
-    // TODO
+    assert(progExp.funcs.length == 1)
+    val funcDef = progExp.funcs.head
+    assert(funcDef.ident == "f")
+    assert(funcDef.generics.length == 1)
+    assert(funcDef.generics.head.ident == "T")
+    assert(funcDef.params.length == 1)
+    assert(funcDef.params.head.ident == "x")
+    assert(funcDef.params.head.paramType == IntType())
+    assert(funcDef.returnType == IntType())
+    assert(funcDef.body.isInstanceOf[Ref])
+    assert(funcDef.body.asInstanceOf[Ref].ident == "x")
+    assert(progExp.body.isInstanceOf[Let])
+    val progBody = progExp.body.asInstanceOf[Let]
+    assert(!progBody.isLazy)
+    assert(progBody.ident == "h")
+    assert(progBody.letType.isInstanceOf[FuncType])
+    val funcType = progBody.letType.asInstanceOf[FuncType]
+    assert(funcType.argTypes.length == 1)
+    assert(funcType.argTypes.head == IntType())
+    assert(funcType.returnType == IntType())
+    assert(progBody.expType == UnknownType())
+    assert(progBody.expValue.isInstanceOf[Ref])
+    assert(progBody.expValue.asInstanceOf[Ref].ident == "f")
+    assert(progBody.afterLet.isInstanceOf[NoOp])
   }
 
   "Parser.parseMatchInsideFuncDef" should "parse a match expression inside a function definition" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/match_inside_func_def_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
-    // TODO
+    assert(progExp.funcs.length == 1)
+    val funcDef = progExp.funcs.head
+    assert(funcDef.ident == "f")
+    assert(funcDef.generics.isEmpty)
+    assert(funcDef.params.isEmpty)
+    assert(funcDef.returnType == IntType())
+    assert(funcDef.body.isInstanceOf[Match])
+    val matchExp = funcDef.body.asInstanceOf[Match]
+    assert(matchExp.value.isInstanceOf[Ref])
+    assert(matchExp.value.asInstanceOf[Ref].ident == "x")
+    assert(matchExp.cases.length == 1)
+    assert(matchExp.cases.head.isInstanceOf[Case])
+    val caseExp = matchExp.cases.head
+    assert(caseExp.casePattern.isInstanceOf[ValueCase])
+    assert(caseExp.casePattern.asInstanceOf[ValueCase].value.isInstanceOf[AnyCase])
+    assert(caseExp.caseExp.isInstanceOf[Lit])
+    assert(caseExp.caseExp.asInstanceOf[Lit].value == IntVal(0))
+
+    assert(progExp.body.isInstanceOf[NoOp])
   }
 
   "Parser.parseSemicolon" should "parse multiple function defintions with optional semicolons" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_parsing_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
-    // TODO
+    assert(progExp.funcs.length == 4)
+    assert(progExp.funcs.count(_.returnType == BoolType()) == 4)
+    assert(progExp.body.isInstanceOf[NoOp])
   }
 
   "Parser.parseSemicolonMulti" should "parse let expression with multiple semicolons" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_multi_parse_test.bnt")
     assert(exp.isInstanceOf[Let])
     val letExp = exp.asInstanceOf[Let]
-    // TODO
+    assert(letExp.ident == "a")
+    assert(letExp.afterLet.isInstanceOf[Let])
+    val letExp2 = letExp.afterLet.asInstanceOf[Let]
+    assert(letExp2.ident == "dummy$2")
+    assert(letExp2.afterLet.isInstanceOf[Let])
+    val letExp3 = letExp2.afterLet.asInstanceOf[Let]
+    assert(letExp3.ident == "dummy$1")
+    assert(letExp3.afterLet.isInstanceOf[Let])
+    val letExp4 = letExp3.afterLet.asInstanceOf[Let]
+    assert(letExp4.ident == "dummy$0")
+    assert(letExp4.afterLet.isInstanceOf[NoOp])
   }
 
   "Parser.dummy" must "return dummy name" in {

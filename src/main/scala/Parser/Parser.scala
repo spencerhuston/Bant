@@ -63,9 +63,10 @@ object Parser {
       advance()
       true
     }
-    else if (isTerminator(curr))
+    else if (isTerminator(curr)) {
+      advance()
       true
-    else
+    } else
       false
   }
 
