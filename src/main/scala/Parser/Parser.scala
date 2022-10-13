@@ -21,6 +21,7 @@ object Parser {
   def curr: Token = tokenStream(index)
   def advance(): Unit = index += 1
   def none: NoOp = NoOp(curr)
+  def inBounds: Boolean = index < tokenStream.length
 
   def isEof: Boolean = {
     index == tokenStream.length - 1 &&
@@ -47,22 +48,24 @@ object Parser {
   }
 
   def matchStatementEndRequired(): Unit = {
-    if ((index > 0 && isTerminator(tokenStream(index - 1))) && isTerminator(curr))
-      advance()
-    else if (isTerminator(curr))
-      advance()
-    else
-      reportBadMatch(curr, "; or \\n")
+      if ((index > 0 && isTerminator(tokenStream(index - 1))) && !isTerminator(curr))
+        ()
+      else if (isTerminator(curr))
+        advance()
+      else
+        reportBadMatch(curr, "; or \\n")
   }
 
   def matchStatementEndOptional(): Boolean = {
-    if ((index > 0 && isTerminator(tokenStream(index - 1))) && isTerminator(curr)) {
+    if (isEof)
+      false
+    else if ((index > 0 && isTerminator(tokenStream(index - 1))) && !isTerminator(curr)) {
       advance()
       true
-    } else if (isTerminator(curr)) {
-      advance()
+    }
+    else if (isTerminator(curr))
       true
-    } else
+    else
       false
   }
 
@@ -158,14 +161,21 @@ object Parser {
 
   def parseExp: Exp = {
     LOG(DEBUG, s"parseExp: $curr")
+    if (!inBounds || isEof)
+      none
+
     curr match {
-        case Keyword(VAL, _, _) => parseLet
-        case Keyword(LAZY, _, _) => parseLet
-        case Keyword(INCLUDE, _, _) => parseInclude
+        case Keyword(VAL, _, _) =>
+          parseLet
+        case Keyword(LAZY, _, _) =>
+          parseLet
+        case Keyword(INCLUDE, _, _) =>
+          parseInclude
         case _ =>
           val smp = parseSimpleExp
-          if (matchOptional(STATEMENT_END)) {
-            Let(smp.token, isLazy = false, dummy, smp.expType, smp, parseExp)
+          if (matchStatementEndOptional()) {
+            val afterDummyLet = parseExp
+            Let(smp.token, isLazy = false, dummy, smp.expType, smp, afterDummyLet)
           } else {
             smp
           }

@@ -191,13 +191,14 @@ class ParserTest extends AnyFlatSpec {
     assert(let.expType == UnknownType())
     assert(let.expValue.isInstanceOf[Lit])
     assert(let.expValue.asInstanceOf[Lit].value == IntVal(0))
-    assert(let.afterLet.isInstanceOf[Ref])
+    assert(let.afterLet.isInstanceOf[Let])
   }
 
   it must "return lit" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/lit_test.bnt")
-    assert(exp.isInstanceOf[Lit])
-    val lit = exp.asInstanceOf[Lit]
+    assert(exp.isInstanceOf[Let])
+    assert(exp.asInstanceOf[Let].expValue.isInstanceOf[Lit])
+    val lit = exp.asInstanceOf[Let].expValue.asInstanceOf[Lit]
     assert(lit.value == IntVal(5))
   }
 
@@ -224,13 +225,14 @@ class ParserTest extends AnyFlatSpec {
     assert(let.expType == UnknownType())
     assert(let.expValue.isInstanceOf[Lit])
     assert(let.expValue.asInstanceOf[Lit].value == IntVal(0))
-    assert(let.afterLet.isInstanceOf[Ref])
+    assert(let.afterLet.isInstanceOf[Let])
   }
 
   "Parser.parseBranch" must "return branch exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/branch_test.bnt")
-    assert(exp.isInstanceOf[Branch])
-    val branch = exp.asInstanceOf[Branch]
+    assert(exp.isInstanceOf[Let])
+    assert(exp.asInstanceOf[Let].expValue.isInstanceOf[Branch])
+    val branch = exp.asInstanceOf[Let].expValue.asInstanceOf[Branch]
     print(branch)
     assert(branch.condition.isInstanceOf[Lit] &&
       branch.condition.asInstanceOf[Lit].value == BoolVal(true))
@@ -334,10 +336,17 @@ class ParserTest extends AnyFlatSpec {
     // TODO
   }
 
-  "Parser.parseSimpleGenericFunction" should "parse multiple function definitions with ambiguous linebreaks" in {
+  "Parser.parseSemicolon" should "parse multiple function defintions with optional semicolons" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_parsing_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
+    // TODO
+  }
+
+  "Parser.parseSemicolonMulti" should "parse let expression with multiple semicolons" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_multi_parse_test.bnt")
+    assert(exp.isInstanceOf[Let])
+    val letExp = exp.asInstanceOf[Let]
     // TODO
   }
 

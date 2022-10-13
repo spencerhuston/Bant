@@ -1,4 +1,1 @@
-match (x) {
-    case 0 => 1
-    case _ => 0
-}
+5

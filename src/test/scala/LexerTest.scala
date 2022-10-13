@@ -221,7 +221,7 @@ class LexerTest extends AnyFlatSpec {
   "Lexer.scan and Lexer.scanHelper" should "make entire tokenStream" in {
     Lexer.clear()
     Lexer.scan("val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }\n\nforeach[Residence](residences, (r: Residence) => r.printDimensions())\n\nval house = House(3, 2)\n\nval optHouse: Option[House] = house match {\n    case House(bed, bath) => Some(House(bed, bath))\n    case _ => None\n}")
-    assert(Lexer.tokenStream.size == 103)
+    assert(Lexer.tokenStream.size == 100)
   }
 
   "Lexer.clear" should "clear all Lexer & Position vars" in {

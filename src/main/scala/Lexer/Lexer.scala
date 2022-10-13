@@ -297,6 +297,32 @@ object Lexer {
     }
   }
 
+  @tailrec
+  def stripMultiSemicolons(tokenStream: ArrayBuffer[Token], index: Int = 0, semicolonIndex: Int = -1): ArrayBuffer[Token] = {
+    tokenStream(index) match {
+      case Terminator(_, _) =>
+        if (semicolonIndex == -1)
+          stripMultiSemicolons(tokenStream, index + 1, index)
+        else
+          stripMultiSemicolons(tokenStream, index + 1, semicolonIndex)
+      case Delimiter(t, _, _) if t.toString == ";" =>
+        if (semicolonIndex == -1)
+          stripMultiSemicolons(tokenStream, index + 1, index)
+        else
+          stripMultiSemicolons(tokenStream, index + 1, semicolonIndex)
+      case EOF(_, _) =>
+        tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
+        tokenStream
+      case _ =>
+        if (semicolonIndex > 0) {
+          tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
+          stripMultiSemicolons(tokenStream, semicolonIndex + 1)
+        }
+        else
+          stripMultiSemicolons(tokenStream, index + 1)
+    }
+  }
+
   def scan(sourceString: String): ArrayBuffer[Token] = {
     var tmpSourceString = sourceString.replace("\r", "")
     if (tmpSourceString.endsWith("\n"))
@@ -306,7 +332,7 @@ object Lexer {
     lineList = position.source.split("\n")
     scanHelper()
 
-    tokenStream = parseNewlines(removeStartingNewlines(tokenStream))
+    tokenStream = stripMultiSemicolons(parseNewlines(removeStartingNewlines(tokenStream)))
     var tokenStreamStringList = ""
     tokenStream.foreach(tokenStreamStringList += _ + "\n")
     LOG_HEADER("TOKENS", tokenStreamStringList)
