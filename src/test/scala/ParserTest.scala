@@ -3,7 +3,7 @@ import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Terminator, Token}
 import Logger.Logger.lineList
-import Parser.{AnyCase, ArrayDef, BoolVal, Branch, Case, CharVal, DictDef, FunDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prog, Ref, SetDef, TupleDef, ValueCase}
+import Parser.{AnyCase, ArrayDef, BoolVal, Branch, Case, CharVal, DictDef, FunDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prim, Prog, Ref, SetDef, TupleDef, ValueCase}
 import Parser.Parser._
 import TypeChecker.{BoolType, FuncType, IntType, UnknownType}
 
@@ -77,21 +77,21 @@ class ParserTest extends AnyFlatSpec {
     clear()
     tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(matchRequired(VAL) && index == 2)
+    assert(matchRequired(VAL) && index == 1)
   }
 
   it should "return false if match is not made" in {
     clear()
     tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(!matchRequired(LAZY) && index == 2 && errorOccurred)
+    assert(!matchRequired(LAZY) && index == 1 && errorOccurred)
   }
 
   "Parser.matchOptional" must "return true if match is made and advance" in {
     clear()
     tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(matchOptional(VAL) && index == 2)
+    assert(matchOptional(VAL) && index == 1)
   }
 
   it should "return false if match is not made and not advance" in {
@@ -213,7 +213,8 @@ class ParserTest extends AnyFlatSpec {
     assert(let.expType == UnknownType())
     assert(let.expValue.isInstanceOf[Lit])
     assert(let.expValue.asInstanceOf[Lit].value == IntVal(0))
-    assert(let.afterLet.isInstanceOf[Let])
+    assert(let.afterLet.isInstanceOf[Ref])
+    assert(let.afterLet.asInstanceOf[Ref].ident == "a")
   }
 
   it must "return nested let in let" in {
@@ -240,10 +241,8 @@ class ParserTest extends AnyFlatSpec {
 
   it must "return lit" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/lit_test.bnt")
-    assert(exp.isInstanceOf[Let])
-    assert(exp.asInstanceOf[Let].expValue.isInstanceOf[Lit])
-    val lit = exp.asInstanceOf[Let].expValue.asInstanceOf[Lit]
-    assert(lit.value == IntVal(5))
+    assert(exp.isInstanceOf[Lit])
+    assert(exp.asInstanceOf[Lit].value == IntVal(5))
   }
 
   "Parser.parseLet" must "return simplest let when given tokens" in {
@@ -269,15 +268,14 @@ class ParserTest extends AnyFlatSpec {
     assert(let.expType == UnknownType())
     assert(let.expValue.isInstanceOf[Lit])
     assert(let.expValue.asInstanceOf[Lit].value == IntVal(0))
-    assert(let.afterLet.isInstanceOf[Let])
+    assert(let.afterLet.isInstanceOf[Ref])
+    assert(let.afterLet.asInstanceOf[Ref].ident == "a")
   }
 
   "Parser.parseBranch" must "return branch exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/branch_test.bnt")
-    assert(exp.isInstanceOf[Let])
-    assert(exp.asInstanceOf[Let].expValue.isInstanceOf[Branch])
-    val branch = exp.asInstanceOf[Let].expValue.asInstanceOf[Branch]
-    print(branch)
+    assert(exp.isInstanceOf[Branch])
+    val branch = exp.asInstanceOf[Branch]
     assert(branch.condition.isInstanceOf[Lit] &&
       branch.condition.asInstanceOf[Lit].value == BoolVal(true))
     assert(branch.ifBranch.isInstanceOf[Lit] &&
@@ -366,6 +364,18 @@ class ParserTest extends AnyFlatSpec {
       matchExp.cases(1).caseExp.asInstanceOf[Lit].value == IntVal(0))
   }
 
+  "Parser.parseFunctionDefinition" should "parse 1 function definition" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/func_def_test.bnt")
+    assert(exp.isInstanceOf[Prog])
+    val funcDef = exp.asInstanceOf[Prog].funcs.head
+    assert(funcDef.ident == "a")
+    assert(funcDef.generics.isEmpty)
+    assert(funcDef.params.isEmpty)
+    assert(funcDef.returnType == IntType())
+    assert(funcDef.body.isInstanceOf[Lit])
+    assert(funcDef.body.asInstanceOf[Lit].value == IntVal(2))
+  }
+
   "Parser.parseSimpleGenericFunction" should "parse a 1 polymorphic function program exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/generic_func_test.bnt")
     assert(exp.isInstanceOf[Prog])
@@ -421,7 +431,38 @@ class ParserTest extends AnyFlatSpec {
     assert(progExp.body.isInstanceOf[NoOp])
   }
 
-  "Parser.parseSemicolon" should "parse multiple function defintions with optional semicolons" in {
+  "Parser.parseFuncClosure" should "parse closure made of function definitions" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/func_closure_test.bnt")
+    assert(exp.isInstanceOf[Prog])
+    val prog = exp.asInstanceOf[Prog]
+    assert(prog.funcs.length == 1)
+    val func = prog.funcs.head
+    assert(func.ident == "a")
+    assert(func.body.isInstanceOf[Prog])
+    assert(func.body.asInstanceOf[Prog].funcs.length == 1)
+    assert(func.body.asInstanceOf[Prog].funcs.head.ident == "b")
+    assert(func.body.asInstanceOf[Prog].body.isInstanceOf[Ref])
+    assert(func.body.asInstanceOf[Prog].body.asInstanceOf[Ref].ident == "b")
+  }
+
+  "Parser.parseLambdaClosure" should "parse closure made of lambdas" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/lambda_closure_test.bnt")
+    assert(exp.isInstanceOf[Let])
+    val let = exp.asInstanceOf[Let]
+    assert(let.expValue.isInstanceOf[Let])
+    val lambda1 = let.expValue.asInstanceOf[Let]
+    assert(lambda1.ident == "anon$0")
+    assert(lambda1.expValue.isInstanceOf[FunDef])
+    assert(lambda1.expValue.asInstanceOf[FunDef].ident == "anon$0_def")
+    assert(lambda1.expValue.asInstanceOf[FunDef].body.isInstanceOf[Let])
+    val lambda2 = lambda1.expValue.asInstanceOf[FunDef].body.asInstanceOf[Let]
+    assert(lambda2.ident == "anon$1")
+    assert(lambda2.expValue.isInstanceOf[FunDef])
+    assert(lambda2.expValue.asInstanceOf[FunDef].ident == "anon$1_def")
+    assert(lambda2.expValue.asInstanceOf[FunDef].body.isInstanceOf[Prim])
+  }
+
+  "Parser.parseSemicolon" should "parse multiple function definitions with optional semicolons" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_parsing_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]

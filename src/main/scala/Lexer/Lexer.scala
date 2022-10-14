@@ -249,10 +249,8 @@ object Lexer {
         if (isValidCharacter) {
           if (isComment)
             skipLine()
-          else if (isNewline) {
-            addToken(Terminator(curr.toString.replace("\n", "\\n")))
+          else if (isNewline)
             newline()
-          }
           else if (isSemicolon) {
             addToken(Terminator(";"))
             advanceChar()
@@ -269,31 +267,11 @@ object Lexer {
         scanHelper()
       }
       else {
-        addToken(Terminator(";"))
         addToken(EOF())
       }
     }
     else {
-      addToken(Terminator(";"))
       addToken(EOF())
-    }
-  }
-
-  def removeStartingNewlines(tokenStream: ArrayBuffer[Token]): ArrayBuffer[Token] = {
-    tokenStream.takeRight(tokenStream.length - tokenStream.indexWhere(t => t match {
-      case Terminator(_, _) => false
-      case _ => true
-    }))
-  }
-
-  @tailrec
-  def parseNewlines(tokenStream: ArrayBuffer[Token], parseIndex: Int = 0): ArrayBuffer[Token] = {
-    tokenStream(parseIndex) match {
-      case Terminator(t, fp) if t == "\\n" =>
-        tokenStream(parseIndex) = Terminator(";", fp)
-        parseNewlines(tokenStream, parseIndex + 1)
-      case EOF(_, fp) => tokenStream
-      case _ => parseNewlines(tokenStream, parseIndex + 1)
     }
   }
 
@@ -305,16 +283,13 @@ object Lexer {
           stripMultiSemicolons(tokenStream, index + 1, index)
         else
           stripMultiSemicolons(tokenStream, index + 1, semicolonIndex)
-      case Delimiter(t, _, _) if t.toString == ";" =>
-        if (semicolonIndex == -1)
-          stripMultiSemicolons(tokenStream, index + 1, index)
-        else
-          stripMultiSemicolons(tokenStream, index + 1, semicolonIndex)
       case EOF(_, _) =>
-        tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
+        if (semicolonIndex != -1) {
+          tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
+        }
         tokenStream
       case _ =>
-        if (semicolonIndex > 0) {
+        if (semicolonIndex != -1) {
           tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
           stripMultiSemicolons(tokenStream, semicolonIndex + 1)
         }
@@ -332,7 +307,7 @@ object Lexer {
     lineList = position.source.split("\n")
     scanHelper()
 
-    tokenStream = stripMultiSemicolons(parseNewlines(removeStartingNewlines(tokenStream)))
+    tokenStream = stripMultiSemicolons(tokenStream)
     var tokenStreamStringList = ""
     tokenStream.foreach(tokenStreamStringList += _ + "\n")
     LOG_HEADER("TOKENS", tokenStreamStringList)

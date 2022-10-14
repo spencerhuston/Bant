@@ -8,7 +8,7 @@ class LexerTest extends AnyFlatSpec {
   "Lexer.addToken" should "add a token to the stream" in {
     Main.clear()
     Lexer.scan("test\n")
-    assert(Lexer.tokenStream.size == 3)
+    assert(Lexer.tokenStream.size == 2)
   }
 
   "Lexer.isValueOf" should "return true if value is member of its enum" in {
@@ -181,47 +181,47 @@ class LexerTest extends AnyFlatSpec {
   it should "add to tokenStream once if 2-char delim exists" in {
     Lexer.clear()
     Lexer.scan(":>")
-    assert(Lexer.tokenStream.size == 3 &&
+    assert(Lexer.tokenStream.size == 2 &&
       Lexer.tokenStream(0).tokenText == ":>")
   }
 
   it should "not add to tokenStream if no delim exists" in {
     Lexer.clear()
     Lexer.scan("c")
-    assert(Lexer.tokenStream.size == 3 &&
+    assert(Lexer.tokenStream.size == 2 &&
       Lexer.tokenStream(0).tokenText == "c")
   }
 
   "Lexer.handleNumValue" should "add to tokenStream numeric value exists" in {
     Lexer.clear()
     Lexer.scan("12345")
-    assert(Lexer.tokenStream.size == 3 &&
+    assert(Lexer.tokenStream.size == 2 &&
       Lexer.tokenStream(0).tokenText == "12345")
   }
 
   it should "not add to tokenStream if no numeric value exists" in {
     Lexer.clear()
     Lexer.scan("test")
-    assert(Lexer.tokenStream.size == 3 &&
+    assert(Lexer.tokenStream.size == 2 &&
       Lexer.tokenStream(0).tokenText == "test")
   }
 
   "Lexer.handleTerm" should "add Keyword or Ident to tokenStream if curr is one" in {
     Lexer.clear()
     Lexer.scan("val")
-    assert(Lexer.tokenStream.size == 3 &&
+    assert(Lexer.tokenStream.size == 2 &&
       Lexer.tokenStream(0).tokenText == "val")
 
     Lexer.clear()
     Lexer.scan("test")
-    assert(Lexer.tokenStream.size == 3 &&
+    assert(Lexer.tokenStream.size == 2 &&
       Lexer.tokenStream(0).tokenText == "test")
   }
 
   "Lexer.scan and Lexer.scanHelper" should "make entire tokenStream" in {
     Lexer.clear()
     Lexer.scan("val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }\n\nforeach[Residence](residences, (r: Residence) => r.printDimensions())\n\nval house = House(3, 2)\n\nval optHouse: Option[House] = house match {\n    case House(bed, bath) => Some(House(bed, bath))\n    case _ => None\n}")
-    assert(Lexer.tokenStream.size == 100)
+    assert(Lexer.tokenStream.size == 93)
   }
 
   "Lexer.clear" should "clear all Lexer & Position vars" in {

@@ -65,7 +65,7 @@
 
 <doubleQuote> ::= ''
 
-<terminator> ::= `;' | `\\n'
+<terminator> ::= `;'
 
 \end{grammar}
 
@@ -85,15 +85,15 @@
 
 \end{grammar}
 
-\paragraph{Algebraic Data Types and Type-Traits}
+\paragraph{Algebraic Data Types and Typeclasses}
 
 \begin{grammar}
 
 <generic> ::= `['<ident>[`,' <ident>]*`]'
 
-<adt> ::= `type' <ident>[<generic>][`:' <ident>[<generic>]]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
+<adt> ::= `type' <ident>[<generic>][`:' <ident>[<generic>]]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'<terminator>
  
-<typeclass> ::= `typeclass' <ident> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'
+<typeclass> ::= `typeclass' <ident> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'<terminator>
 
 <instance> ::= `instance' <ident>`:'<ident>`\{'<prog>`\}'
 
@@ -145,7 +145,7 @@
 
 <app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
 
-<anonLmbd> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp>
+<lambda> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp><terminator>
 
 \end{grammar}
 
@@ -188,7 +188,7 @@
 \alt <instance>
 \alt <adt>
 \alt <prog>
-\alt <anonLmbd>
+\alt <lambda>
 
 <exp> ::= <smp>[<terminator><exp>]
 \alt [`lazy'] `val' <ident>[`:'<type>] `=' <smp><terminator><exp>

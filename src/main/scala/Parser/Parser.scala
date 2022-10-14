@@ -31,39 +31,23 @@ object Parser {
       })
   }
 
-  def skipSemicolon(): Unit = {
-    curr match {
-      case Terminator(_, _) => advance()
-      case Delimiter(delimValue, _, _) if delimValue == STATEMENT_END => advance()
-      case _ => ()
-    }
-  }
-
   def isTerminator(token: Token): Boolean = {
     token match {
       case Terminator(_, _) => true
-      case Delimiter(delimValue, _, _) if delimValue == STATEMENT_END => true
+      case Delimiter(delimValue, _, _) if delimValue.toString == ";" => true
       case _ => false
     }
   }
 
   def matchStatementEndRequired(): Unit = {
-      if ((index > 0 && isTerminator(tokenStream(index - 1))) && !isTerminator(curr))
-        ()
-      else if (isTerminator(curr))
+      if (isTerminator(curr))
         advance()
       else
-        reportBadMatch(curr, "; or \\n")
+        reportBadMatch(curr, ";")
   }
 
   def matchStatementEndOptional(): Boolean = {
-    if (isEof)
-      false
-    else if ((index > 0 && isTerminator(tokenStream(index - 1))) && !isTerminator(curr)) {
-      advance()
-      true
-    }
-    else if (isTerminator(curr)) {
+    if (isTerminator(curr)) {
       advance()
       true
     } else
@@ -84,7 +68,6 @@ object Parser {
       reportBadMatch(curr, value.toString)
 
     advance()
-    skipSemicolon()
     matched
   }
 
@@ -100,7 +83,6 @@ object Parser {
     if (matched)
       advance()
 
-    skipSemicolon()
     matched
   }
 
@@ -162,7 +144,7 @@ object Parser {
 
   def parseExp: Exp = {
     LOG(DEBUG, s"parseExp: $curr")
-    if (!inBounds || isEof)
+    if (!inBounds)
       none
 
     curr match {
@@ -213,21 +195,21 @@ object Parser {
   def parseSimpleExp: Exp = {
     LOG(DEBUG, s"parseSimpleExp: $curr")
     curr match {
-        case Keyword(IF, _, _) => parseBranch
-        case Keyword(LIST, _, _) => parseCollectionValue
-        case Keyword(ARRAY, _, _) => parseCollectionValue
-        case Keyword(SET, _, _) => parseCollectionValue
-        case Keyword(TUPLE, _, _) => parseCollectionValue
-        case Keyword(DICT, _, _) => parseCollectionValue
-        case Keyword(MATCH, _, _) => parseMatch
-        case Keyword(TYPECLASS, _, _) => parseTypeclass
-        case Keyword(INSTANCE, _, _) => parseInstance
-        case Keyword(TYPE, _, _) => parseAdt
-        case Keyword(FN, _, _) => parseProg
-        case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
-        case Delimiter(Delimiters.OR, _, _) => parseLambda
-        case _ => parseUtight(0)
-      }
+      case Keyword(IF, _, _) => parseBranch
+      case Keyword(LIST, _, _) => parseCollectionValue
+      case Keyword(ARRAY, _, _) => parseCollectionValue
+      case Keyword(SET, _, _) => parseCollectionValue
+      case Keyword(TUPLE, _, _) => parseCollectionValue
+      case Keyword(DICT, _, _) => parseCollectionValue
+      case Keyword(MATCH, _, _) => parseMatch
+      case Keyword(TYPECLASS, _, _) => parseTypeclass
+      case Keyword(INSTANCE, _, _) => parseInstance
+      case Keyword(TYPE, _, _) => parseAdt
+      case Keyword(FN, _, _) => parseProg
+      case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
+      case Delimiter(Delimiters.OR, _, _) => parseLambda
+      case _ => parseUtight(0)
+    }
   }
 
   def parseBranch: Exp = {
@@ -289,6 +271,9 @@ object Parser {
           values += parseSimpleExp
         }
         DictDef(token, keys, values)
+      case _ =>
+        reportUnexpected(curr)
+        none
     }
   }
 
@@ -304,11 +289,9 @@ object Parser {
     matchRequired(LEFT_BRACE)
     matchRequired(CASE)
     val cases = ArrayBuffer[Case](parseCase)
-    skipSemicolon()
 
     while (matchOptional(CASE)) {
       cases += parseCase
-      skipSemicolon()
     }
 
     warnAnyCase(cases)
@@ -398,7 +381,6 @@ object Parser {
     none
   }
 
-  // TODO
   def parseInstance: Exp = {
     LOG(DEBUG, s"parseInstance: $curr")
     val token = curr
@@ -412,7 +394,7 @@ object Parser {
       funcs += parseFunDef
     }
     matchRequired(RIGHT_BRACE)
-    matchRequired(STATEMENT_END)
+    matchStatementEndRequired()
     Instance(token, adtIdent, typeclassIdent, funcs)
   }
 
@@ -500,12 +482,11 @@ object Parser {
       params += parseParameter
     }
 
-    var returnType: Type = UnknownType()
-    if (matchOptional(RETURN_TYPE))
-      returnType = parseType
-
+    matchRequired(RETURN_TYPE)
+    val returnType: Type = parseType
     matchRequired(ASSIGNMENT)
-    val body = parseExp
+    val body = parseSimpleExp
+    matchStatementEndRequired()
 
     Let(token,
         isLazy = false,

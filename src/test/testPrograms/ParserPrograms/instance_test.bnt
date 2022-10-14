@@ -1,0 +1,3 @@
+instance adt : typecl {
+    fn g() -> int = 5
+};
