@@ -461,9 +461,20 @@ object Parser {
 
     var defaultVal: Exp = none
     if (matchOptional(ASSIGNMENT))
-      defaultVal = parseAtom
+      defaultVal = parseDefaultValue
 
     Parameter(token, ident, paramType, defaultVal)
+  }
+
+  def parseDefaultValue: Exp = {
+    curr match {
+      case Keyword(LIST, _, _) => parseCollectionValue
+      case Keyword(ARRAY, _, _) => parseCollectionValue
+      case Keyword(SET, _, _) => parseCollectionValue
+      case Keyword(TUPLE, _, _) => parseCollectionValue
+      case Keyword(DICT, _, _) => parseCollectionValue
+      case _ => parseAtom
+    }
   }
 
   def parseLambda: Exp = {

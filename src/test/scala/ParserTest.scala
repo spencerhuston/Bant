@@ -376,7 +376,28 @@ class ParserTest extends AnyFlatSpec {
     assert(funcDef.body.asInstanceOf[Lit].value == IntVal(2))
   }
 
-  "Parser.parseSimpleGenericFunction" should "parse a 1 polymorphic function program exp" in {
+  "Parser.parseFunctionWithDefaultParam" should "parse 1 function with a default parameter" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/func_default_value_test.bnt")
+    assert(exp.isInstanceOf[Prog])
+    val progExp = exp.asInstanceOf[Prog]
+    assert(progExp.funcs.length == 1)
+    val funcDef = progExp.funcs.head
+    assert(funcDef.ident == "a")
+    assert(funcDef.generics.isEmpty)
+    assert(funcDef.params.length == 1)
+    assert(funcDef.params.head.ident == "x")
+    assert(funcDef.params.head.paramType == IntType())
+    assert(funcDef.params.head.default.isInstanceOf[Lit])
+    assert(funcDef.params.head.default.asInstanceOf[Lit].value == IntVal(5))
+    assert(funcDef.returnType == IntType())
+    assert(funcDef.body.isInstanceOf[Prim])
+    assert(funcDef.body.asInstanceOf[Prim].left.isInstanceOf[Ref])
+    assert(funcDef.body.asInstanceOf[Prim].left.asInstanceOf[Ref].ident == "x")
+    assert(funcDef.body.asInstanceOf[Prim].right.isInstanceOf[Lit])
+    assert(funcDef.body.asInstanceOf[Prim].right.asInstanceOf[Lit].value == IntVal(2))
+  }
+
+  "Parser.parseSimpleGenericFunction" should "parse 1 polymorphic function program exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/generic_func_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]

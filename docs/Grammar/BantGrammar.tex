@@ -95,7 +95,7 @@
  
 <typeclass> ::= `typeclass' <ident> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'<terminator>
 
-<instance> ::= `instance' <ident>`:'<ident>`\{'<prog>`\}'
+<instance> ::= `instance' <ident>`:'<ident>`\{'<prog>`\}'<terminator>
 
 \end{grammar}
 
@@ -129,7 +129,7 @@
 
 \begin{grammar}
 
-<param> ::= <ident>`:'<type>[`='<atom>]
+<param> ::= <ident>`:'<type>[`=' <atom> | <collection>]
 
 <lowerBoundOp> ::= `:>'
 
