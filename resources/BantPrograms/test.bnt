@@ -1,1 +1,9 @@
-fn a(x: int = 5) -> int = x + 2;
+typeclass Eq[T] {
+    equal = (T, T) -> bool
+    notEqual = (T, T) -> bool
+};
+
+instance Temp : Eq {
+    fn equal(t1: int, t2: int) -> bool = t1 == t2;
+    fn notEqual(t1: int, t2: int) -> bool = t1 != t2;
+};

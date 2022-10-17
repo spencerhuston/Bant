@@ -165,7 +165,7 @@ object Parser {
       }
   }
 
-  def parseLet: Exp = {
+  def parseLet: Let = {
     LOG(DEBUG, s"parseLet: $curr")
     val token = curr
     val isLazy = matchOptional(LAZY)
@@ -212,7 +212,7 @@ object Parser {
     }
   }
 
-  def parseBranch: Exp = {
+  def parseBranch: Branch = {
     LOG(DEBUG, s"parseBranch: $curr")
     val token = curr
     matchRequired(IF)
@@ -277,7 +277,7 @@ object Parser {
     }
   }
 
-  def parseMatch: Exp = {
+  def parseMatch: Match = {
     LOG(DEBUG, s"parseMatch: $curr")
 
     val matchToken = curr
@@ -331,11 +331,10 @@ object Parser {
         val ident = tokenText
         advance()
         val values = ArrayBuffer[ValueCasePattern]()
-        matchRequired(LEFT_PAREN)
-
-        while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
-          values += parseValueCase
-
+        if (matchOptional(LEFT_PAREN)) {
+          while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
+            values += parseValueCase
+        }
         ConstructorCase(ident, values)
       case _ =>
         val token = curr
@@ -375,17 +374,32 @@ object Parser {
     }
   }
 
-  // TODO
   def parseTypeclass: Exp = {
     LOG(DEBUG, s"parseTypeclass: $curr")
-    none
+    val token = curr
+    matchRequired(TYPECLASS)
+    val typeclassIdent = matchIdent
+    val genericTypes = parseGenerics
+    matchRequired(LEFT_BRACE)
+
+    val names = ArrayBuffer[Ref]()
+    val signatures = ArrayBuffer[Type]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
+      names += Ref(curr, matchIdent)
+      matchRequired(ASSIGNMENT)
+      signatures += parseType
+    }
+    matchStatementEndRequired()
+
+    Typeclass(token, typeclassIdent, genericTypes, names, signatures, parseExp)
   }
 
-  def parseInstance: Exp = {
+  def parseInstance: Instance = {
     LOG(DEBUG, s"parseInstance: $curr")
     val token = curr
     matchRequired(INSTANCE)
     val adtIdent = Ref(curr, matchIdent)
+    val adtGenerics = parseGenerics
     matchRequired(COLON)
     val typeclassIdent = Ref(curr, matchIdent)
     matchRequired(LEFT_BRACE)
@@ -395,7 +409,7 @@ object Parser {
     }
     matchRequired(RIGHT_BRACE)
     matchStatementEndRequired()
-    Instance(token, adtIdent, typeclassIdent, funcs)
+    Instance(token, adtIdent, typeclassIdent, funcs, parseExp)
   }
 
   // TODO
@@ -419,8 +433,26 @@ object Parser {
 
     val token = curr
     val ident = matchIdent
-    val genericTypes = ArrayBuffer[Generic]()
+    val genericTypes = parseGenerics
 
+    matchRequired(LEFT_PAREN)
+    val params = ArrayBuffer[Parameter]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN)) {
+      params += parseParameter
+    }
+
+    matchRequired(RETURN_TYPE)
+    val returnType = parseType
+
+    matchRequired(ASSIGNMENT)
+    val body = parseSimpleExp
+    matchStatementEndRequired()
+
+    FunDef(token, ident, genericTypes, params, returnType, body)
+  }
+
+  def parseGenerics: ArrayBuffer[Generic] = {
+    val genericTypes = ArrayBuffer[Generic]()
     if (matchOptional(LEFT_BRACKET)) {
       while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET)) {
         val genericType = matchIdent
@@ -436,20 +468,7 @@ object Parser {
         genericTypes += Generic(genericType, lowerBoundType, upperBoundType)
       }
     }
-    matchRequired(LEFT_PAREN)
-    val params = ArrayBuffer[Parameter]()
-    while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN)) {
-      params += parseParameter
-    }
-
-    matchRequired(RETURN_TYPE)
-    val returnType = parseType
-
-    matchRequired(ASSIGNMENT)
-    val body = parseSimpleExp
-    matchStatementEndRequired()
-
-    FunDef(token, ident, genericTypes, params, returnType, body)
+    genericTypes
   }
 
   def parseParameter: Parameter = {
@@ -477,7 +496,7 @@ object Parser {
     }
   }
 
-  def parseLambda: Exp = {
+  def parseLambda: Let = {
     LOG(DEBUG, s"parseLambda: $curr")
     val token = curr
     var emptyParams = false
@@ -654,7 +673,6 @@ object Parser {
         val argTypes = ArrayBuffer[Type]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
           argTypes += parseType
-        matchRequired(RIGHT_PAREN)
         matchRequired(RETURN_TYPE)
         FuncType(argTypes, parseType)
       case Ident(ident, _) =>

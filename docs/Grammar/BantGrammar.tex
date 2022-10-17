@@ -89,13 +89,21 @@
 
 \begin{grammar}
 
-<generic> ::= `['<ident>[`,' <ident>]*`]'
+<lowerBoundOp> ::= `:>'
 
-<adt> ::= `type' <ident>[<generic>][`:' <ident>[<generic>]]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'<terminator>
+<upperBoundOp> ::= `<:'
+
+<bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
+
+<generics> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
+
+<genericIdent> ::= <ident>[<generics>]
+
+<adt> ::= `type' <genericIdent> [`:' <ident>[<generic>]]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'<terminator><exp>
  
-<typeclass> ::= `typeclass' <ident> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'<terminator>
+<typeclass> ::= `typeclass' <genericIdent> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'<terminator><exp>
 
-<instance> ::= `instance' <ident>`:'<ident>`\{'<prog>`\}'<terminator>
+<instance> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<terminator><exp>
 
 \end{grammar}
 
@@ -131,15 +139,7 @@
 
 <param> ::= <ident>`:'<type>[`=' <atom> | <collection>]
 
-<lowerBoundOp> ::= `:>'
-
-<upperBoundOp> ::= `<:'
-
-<bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
-
-<templateTypes> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
-
-<funDef> ::= `fn' <ident>[<templateTypes>]`('[<param> [`,' <param>]* ]`)'[`->'<type>]`='<smp><terminator>
+<funDef> ::= `fn' <genericIdent>`('[<param> [`,' <param>]* ]`)'[`->'<type>]`='<smp><terminator>
 
 <prog> ::= [<funDef>]*<exp>
 
