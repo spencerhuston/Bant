@@ -63,16 +63,28 @@ case class Parameter(token: Token,
 case class App(token: Token) extends Exp
 
 // ADT
-case class Adt(token: Token) extends Exp
+case class Constructor(members: ArrayBuffer[Type])
+case class Adt(token: Token,
+               ident: String,
+               generics: ArrayBuffer[Generic],
+               constructors: ArrayBuffer[Constructor],
+               afterAdt: Exp) extends Exp
+case class Member(ident: String, memberType: Type)
+case class Record(token: Token,
+                  ident: String,
+                  generics: ArrayBuffer[Generic],
+                  members: ArrayBuffer[Member],
+                  afterRecord: Exp) extends Exp
 case class Alias(token: Token,
                  alias: String,
-                 actualType: Type) extends Exp
+                 actualType: Type,
+                 afterAlias: Exp) extends Exp
+case class Signature(name: Ref, funcType: Type)
 case class Typeclass(token: Token,
                      ident: String,
                      genericTypes: ArrayBuffer[Generic],
                      superclass: Ref,
-                     names: ArrayBuffer[Ref],
-                     signatures: ArrayBuffer[Type],
+                     signature: ArrayBuffer[Signature],
                      afterTypeclass: Exp) extends Exp
 case class Instance(token: Token,
                     adt: Ref,
@@ -89,9 +101,9 @@ case class SetDef(token: Token,
                   values: ArrayBuffer[Exp]) extends Exp
 case class TupleDef(token: Token,
                     values: ArrayBuffer[Exp]) extends Exp
+case class Map(key: Exp, value: Exp)
 case class DictDef(token: Token,
-                   keys: ArrayBuffer[Exp],
-                   values: ArrayBuffer[Exp]) extends Exp
+                   mapping: ArrayBuffer[Map]) extends Exp
 case class BlockGet(token: Token) extends Exp
 
 // Pattern Matching
@@ -109,7 +121,8 @@ case class TypeCase(ident: String,
 case class ValueCase(value: ValueCasePattern) extends CasePattern
 
 sealed trait ValueCasePattern { }
-case class ConstructorCase(ident: String, values: ArrayBuffer[ValueCasePattern]) extends ValueCasePattern
+case class ConstructorCase(ident: String,
+                           values: ArrayBuffer[ValueCasePattern]) extends ValueCasePattern
 case class LitCase(value: Val) extends ValueCasePattern
 case class AnyCase() extends ValueCasePattern
 

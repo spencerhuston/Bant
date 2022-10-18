@@ -8,6 +8,24 @@ ADT TODO:
 2. Supertypes
 3. Self-reference
 4. Pipe operator for product types
+5. Nameless types
+6. Records
+
+type Some[T] { T };
+type None { };
+
+type Option[T] {
+    Some[T] | None
+};
+
+type Person {
+    int, string | Gender
+};
+
+record Person {
+    age: int,
+    name: string
+};
 
 Function Application TODO:
 1. Regular calls
@@ -19,11 +37,11 @@ Function Application TODO:
 
 General TODO:
 1. More type-tagging during parsing phase
-2. Type aliasing
+2. Extend Exp into Statement to automatically parse ; and after-exp
 
-
+Other Notes:
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined
-- Only 1 typeclass per adt
+- Only 1 typeclass per adt?
 - Overloads on derived adt's are implicit and optional
 - :> and <: for bounded types only
 - Sets in Collection Types

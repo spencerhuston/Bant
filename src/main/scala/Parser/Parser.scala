@@ -205,6 +205,7 @@ object Parser {
       case Keyword(TYPECLASS, _, _) => parseTypeclass
       case Keyword(INSTANCE, _, _) => parseInstance
       case Keyword(TYPE, _, _) => parseAdt
+      case Keyword(RECORD, _, _) => parseRecord
       case Keyword(ALIAS, _, _) => parseAlias
       case Keyword(FN, _, _) => parseProg
       case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
@@ -264,14 +265,14 @@ object Parser {
       case Keyword(DICT, _, _) =>
         advance()
         matchRequired(LEFT_BRACE)
-        val keys = ArrayBuffer[Exp]()
-        val values = ArrayBuffer[Exp]()
+        val mapping = ArrayBuffer[Map]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
-          keys += parseSimpleExp
+          val key = parseSimpleExp
           matchRequired(COLON)
-          values += parseSimpleExp
+          val value = parseSimpleExp
+          mapping += Map(key, value)
         }
-        DictDef(token, keys, values)
+        DictDef(token, mapping)
       case _ =>
         reportUnexpected(curr)
         none
@@ -375,29 +376,30 @@ object Parser {
     }
   }
 
+  def parseSuperType: Ref = {
+    if (matchOptional(CASE_EXP)) Ref(curr, matchIdent)
+    else Ref(curr, "$None$")
+  }
+
   def parseTypeclass: Exp = {
     LOG(DEBUG, s"parseTypeclass: $curr")
     val token = curr
     matchRequired(TYPECLASS)
     val typeclassIdent = matchIdent
     val genericTypes = parseGenerics
-
-    var superclass = Ref(curr, "$None$")
-    if (matchOptional(CASE_EXP)) {
-      superclass = Ref(curr, matchIdent)
-    }
+    val superclass = parseSuperType
 
     matchRequired(LEFT_BRACE)
-    val names = ArrayBuffer[Ref]()
-    val signatures = ArrayBuffer[Type]()
+    val signatures = ArrayBuffer[Signature]()
     while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
-      names += Ref(curr, matchIdent)
+      val name = Ref(curr, matchIdent)
       matchRequired(ASSIGNMENT)
-      signatures += parseType
+      val signature = parseType
+      signatures += Signature(name, signature)
     }
     matchStatementEndRequired()
 
-    Typeclass(token, typeclassIdent, genericTypes, superclass, names, signatures, parseExp)
+    Typeclass(token, typeclassIdent, genericTypes, superclass, signatures, parseExp)
   }
 
   def parseInstance: Instance = {
@@ -423,20 +425,56 @@ object Parser {
     Instance(token, adtIdent, typeclassIdents, funcs, parseExp)
   }
 
-  // TODO
-  def parseAdt: Exp = {
+  def parseAdt: Adt = {
     LOG(DEBUG, s"parseAdt: $curr")
-    none
+    val token = curr
+    matchRequired(TYPE)
+    val ident = matchIdent
+    val generics = parseGenerics
+    matchRequired(LEFT_BRACE)
+
+    val constructors = ArrayBuffer[Constructor]()
+    while (matchOptional(LAMBDA) || !matchOptional(RIGHT_BRACE)) {
+      val typeList = ArrayBuffer[Type](parseType)
+      while (matchOptional(COMMA) && !matchOptional(LAMBDA) && !matchOptional(RIGHT_BRACE)) {
+        typeList += parseType
+      }
+      constructors += Constructor(typeList)
+    }
+
+    matchStatementEndRequired()
+    Adt(token, ident, generics, constructors, parseExp)
+  }
+
+  def parseRecord: Exp = {
+    LOG(DEBUG, s"parseRecord: $curr")
+    val token = curr
+    matchRequired(RECORD)
+    val ident = matchIdent
+    val generics = parseGenerics
+    matchRequired(LEFT_BRACE)
+
+    val members = ArrayBuffer[Member]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
+      val name = matchIdent
+      matchRequired(COLON)
+      val memberType = parseType
+      members += Member(name, memberType)
+    }
+
+    matchStatementEndRequired()
+    Record(token, ident, generics, members, parseExp)
   }
 
   def parseAlias: Alias = {
     LOG(DEBUG, s"parseAlias: $curr")
     val token = curr
-    advance()
+    matchRequired(ALIAS)
     val alias = matchIdent
     matchRequired(ASSIGNMENT)
     val actualType = parseType
-    Alias(token, alias, actualType)
+    matchStatementEndRequired()
+    Alias(token, alias, actualType, parseExp)
   }
 
   def parseProg: Prog = {

@@ -85,9 +85,11 @@
 
 \end{grammar}
 
-\paragraph{Algebraic Data Types and Typeclasses}
+\paragraph{Types and Typeclasses}
 
 \begin{grammar}
+
+<alias> ::= `alias' <ident> `=' <type>
 
 <lowerBoundOp> ::= `:>'
 
@@ -99,15 +101,25 @@
 
 <genericIdent> ::= <ident>[<generics>]
 
-<adt> ::= `type' <genericIdent> [`:' <ident>[<generic>]]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'<terminator><exp>
+<constructor> ::= <ident>[`,'<ident>]*
+
+<cosntructorList> ::= <constructor>[`|'<constructor>]
+
+<adt> ::= `type' <genericIdent>`\{'[<cosntructorLists>]`\}'<terminator><exp>
+
+<members> ::= <ident>`:'<type>[`,'<ident>`:'<type>]*
+
+<record> ::= `record' <genericIdent>`\{'[<members>]`\}'<terminator><exp>
+
+<signatures> ::= <ident>`='<type>[`,'<ident>`='<type>]*
  
-<typeclass> ::= `typeclass' <genericIdent> `\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'<terminator><exp>
+<typeclass> ::= `typeclass' <genericIdent>[`=>' <ident>]`\{'[<signatures>]`\}'<terminator><exp>
 
 <instance> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<terminator><exp>
 
 \end{grammar}
 
-\paragraph{Types}
+\paragraph{Type Definitions}
 
 \begin{grammar}
 
@@ -186,7 +198,9 @@
 \alt <matchSwitch>
 \alt <typeclass>
 \alt <instance>
+\alt <alias>
 \alt <adt>
+\alt <record>
 \alt <prog>
 \alt <lambda>
 

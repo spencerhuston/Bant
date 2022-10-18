@@ -1,3 +1,26 @@
-alias ListInt = List[int];
+type C { int };
+type F { int };
 
-fn f(l: ListInt) -> bool = true;
+type Temp {
+    C | F
+};
+
+typeclass Eq[T] {
+    equal = (T, T) -> bool
+    notEqual = (T, T) -> bool
+};
+
+typeclass Ord[T] => Eq {
+    greater = (T, T) -> bool
+};
+
+instance Temp : Eq, Ord {
+    fn equal(t1: C, t2: C) -> bool = t1 == t2;
+    fn notEqual(t1: C, t2: C) -> bool = t1 != t2;
+    fn greater(t1: C, t2: C) -> bool = t1 > t2;
+};
+
+instance Person : Eq {
+    fn equal(p1: int, p2: int) -> bool = p1 == p2;
+    fn notEqual(p1: int, p2: int) -> bool = p1 != p2;
+};
