@@ -1,15 +1,11 @@
-- Remove traits, now typeclasses
-Typeclass syntax:
-typeclass <ident> {
-    <ident>[, <ident>] = <type>[,
-    <ident>[, <ident>] = <type>
-    ]*
-}
+TYPECLASS TODO:
+1. ADT derive from typeclass
+2. Typeclass superclass
+3. Type in multiple typeclasses
 
-Typeclass instance syntax:
-instance <ident> : <ident> {
-    <prog>
-}
+ADT TODO:
+1.
+
 
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined
 - Only 1 typeclass per adt
@@ -19,24 +15,6 @@ instance <ident> : <ident> {
 - Lazy Evaluation (need to figure out lazy parameters)
 - Polymorhpic parameter as a part of type syntax
 - Polymorphic inference, ex: print[int](5) to print(5). [] is omitted due to inference of parameter type
-
-type Node[T] { data: T, left: Node[T]
-
-Example:
-type Vehicle { wheels: int, year: int }
-
-typeclass VehicleMethods {
-    getWheels = () -> int,
-    getYear = () -> int
-}
-
-instance Vehicle : VehiclesMethods = {
-    fn getWheels() -> int = this.wheels
-    fn getYear() -> int = this.year
-}
-
-# automatically inherits wheels, year, getWheels, and getYear
-type Car : Vehicle { }
 
 # overloaded methods
 instance Car : VehiclesMethods = {

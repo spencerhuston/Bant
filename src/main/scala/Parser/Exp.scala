@@ -67,12 +67,13 @@ case class Adt(token: Token) extends Exp
 case class Typeclass(token: Token,
                      ident: String,
                      genericTypes: ArrayBuffer[Generic],
+                     superclass: Ref,
                      names: ArrayBuffer[Ref],
                      signatures: ArrayBuffer[Type],
                      afterTypeclass: Exp) extends Exp
 case class Instance(token: Token,
                     adt: Ref,
-                    typeclass: Ref,
+                    typeclassIdents: ArrayBuffer[Ref],
                     funcs: ArrayBuffer[FunDef],
                     afterInstance: Exp) extends Exp
 

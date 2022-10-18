@@ -3,7 +3,16 @@ typeclass Eq[T] {
     notEqual = (T, T) -> bool
 };
 
-instance Temp : Eq {
-    fn equal(t1: int, t2: int) -> bool = t1 == t2;
-    fn notEqual(t1: int, t2: int) -> bool = t1 != t2;
+typeclass Ord[T] => Eq {
+    greater = (T, T) -> bool
+};
+
+instance Temp : Eq, Ord {
+    fn equal(t1: C, t2: C) -> bool = t1 == t2;
+    fn greater(t1: C, t2: C) -> bool = t1 > t2;
+};
+
+instance Person : Eq {
+    fn equal(p1: int, p2: int) -> bool = t1 == t2;
+    fn notEqual(p1: int, p2: int) -> bool = t1 != t2;
 };

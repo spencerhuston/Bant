@@ -380,8 +380,13 @@ object Parser {
     matchRequired(TYPECLASS)
     val typeclassIdent = matchIdent
     val genericTypes = parseGenerics
-    matchRequired(LEFT_BRACE)
 
+    var superclass = Ref(curr, "$None$")
+    if (matchOptional(CASE_EXP)) {
+      superclass = Ref(curr, matchIdent)
+    }
+
+    matchRequired(LEFT_BRACE)
     val names = ArrayBuffer[Ref]()
     val signatures = ArrayBuffer[Type]()
     while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
@@ -391,7 +396,7 @@ object Parser {
     }
     matchStatementEndRequired()
 
-    Typeclass(token, typeclassIdent, genericTypes, names, signatures, parseExp)
+    Typeclass(token, typeclassIdent, genericTypes, superclass, names, signatures, parseExp)
   }
 
   def parseInstance: Instance = {
@@ -399,9 +404,14 @@ object Parser {
     val token = curr
     matchRequired(INSTANCE)
     val adtIdent = Ref(curr, matchIdent)
-    val adtGenerics = parseGenerics
     matchRequired(COLON)
-    val typeclassIdent = Ref(curr, matchIdent)
+
+    val typeclassIdents = ArrayBuffer[Ref]()
+    typeclassIdents += Ref(curr, matchIdent)
+    while (matchOptional(COMMA)) {
+      typeclassIdents += Ref(curr, matchIdent)
+    }
+
     matchRequired(LEFT_BRACE)
     val funcs = ArrayBuffer[FunDef]()
     while (matchOptional(FN)) {
@@ -409,7 +419,7 @@ object Parser {
     }
     matchRequired(RIGHT_BRACE)
     matchStatementEndRequired()
-    Instance(token, adtIdent, typeclassIdent, funcs, parseExp)
+    Instance(token, adtIdent, typeclassIdents, funcs, parseExp)
   }
 
   // TODO
