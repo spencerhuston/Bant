@@ -54,7 +54,7 @@ object Lexer {
         case identRegex(_) => true
       }
     } catch {
-      case _ => false
+      case _: Throwable => false
     }
   }
 
@@ -178,7 +178,10 @@ object Lexer {
     }
 
     def addDelimToken(str: String): Unit = {
-      Delimiters.getValue(str) match { case Some(delim) => addToken(Delimiter(delim, str)) }
+      Delimiters.getValue(str) match {
+        case Some(delim) => addToken(Delimiter(delim, str))
+        case _ => ()
+      }
     }
 
     if (isDelimiter && !nextIsDelimiter) {
@@ -230,6 +233,7 @@ object Lexer {
             position.columnNumber = actualColumnNumber - term.length
             addToken(Keyword(keywordValue, term))
             position.columnNumber = actualColumnNumber
+          case _ => ()
         }
       else if (isIdent(term)) {
         findClosestKeyword(term)

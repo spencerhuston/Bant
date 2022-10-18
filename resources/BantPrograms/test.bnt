@@ -1,5 +1,5 @@
-type C { int };
-type F { int };
+alias C = int;
+alias F = int;
 
 type Temp {
     C | F
@@ -10,7 +10,7 @@ typeclass Eq[T] {
     notEqual = (T, T) -> bool
 };
 
-typeclass Ord[T] => Eq {
+typeclass sealed Ord[T] => Eq {
     greater = (T, T) -> bool
 };
 
@@ -23,4 +23,9 @@ instance Temp : Eq, Ord {
 instance Person : Eq {
     fn equal(p1: int, p2: int) -> bool = p1 == p2;
     fn notEqual(p1: int, p2: int) -> bool = p1 != p2;
+};
+
+record sealed Person derives Eq {
+    age: int,
+    name: String
 };

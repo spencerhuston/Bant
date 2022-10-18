@@ -85,40 +85,6 @@
 
 \end{grammar}
 
-\paragraph{Types and Typeclasses}
-
-\begin{grammar}
-
-<alias> ::= `alias' <ident> `=' <type>
-
-<lowerBoundOp> ::= `:>'
-
-<upperBoundOp> ::= `<:'
-
-<bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
-
-<generics> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
-
-<genericIdent> ::= <ident>[<generics>]
-
-<constructor> ::= <ident>[`,'<ident>]*
-
-<cosntructorList> ::= <constructor>[`|'<constructor>]
-
-<adt> ::= `type' <genericIdent>`\{'[<cosntructorLists>]`\}'<terminator><exp>
-
-<members> ::= <ident>`:'<type>[`,'<ident>`:'<type>]*
-
-<record> ::= `record' <genericIdent>`\{'[<members>]`\}'<terminator><exp>
-
-<signatures> ::= <ident>`='<type>[`,'<ident>`='<type>]*
- 
-<typeclass> ::= `typeclass' <genericIdent>[`=>' <ident>]`\{'[<signatures>]`\}'<terminator><exp>
-
-<instance> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<terminator><exp>
-
-\end{grammar}
-
 \paragraph{Type Definitions}
 
 \begin{grammar}
@@ -145,6 +111,59 @@
 
 \end{grammar}
 
+\paragraph{Pattern Matching}
+
+\begin{grammar}
+
+<value> ::= <ident>`('[<value>[`,'<value>]]`)'
+\alt <prim>
+\alt `\_'
+
+<caseVal> ::= <ident>`:'<type>
+\alt <value>
+
+<match> ::= `match'`('<smp>`)' `\{'`case'<caseVal>`=>'<smp>[`case'<caseVal>`=>'<smp>]*`\}'
+
+\end{grammar}
+
+\paragraph{Types and Typeclasses}
+
+\begin{grammar}
+
+<alias> ::= `alias' <ident> `=' <type>
+
+<lowerBoundOp> ::= `:>'
+
+<upperBoundOp> ::= `<:'
+
+<bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
+
+<generics> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
+
+<genericIdent> ::= <ident>[<generics>]
+
+<stmntEnd> ::= <terminator><exp>
+
+<derive> ::= `derives' <ident>
+
+<constructor> ::= <ident>[`,'<ident>]*
+
+<cosntructorList> ::= <constructor>[`|'<constructor>]
+
+<adt> ::= `type' <genericIdent>[<derive>]`\{'[<cosntructorLists>]`\}'<stmntEnd>
+
+<members> ::= <ident>`:'<type>[`,'<ident>`:'<type>]*
+
+<record> ::= `record'[`sealed']<genericIdent>[`=>'<genericIdent>][<derive>]`\{'[<members>]`\}'<stmntEnd>
+
+<signatures> ::= <ident>`='<type>[`,'<ident>`='<type>]*
+ 
+<typeclass> ::= `typeclass'[`sealed']<genericIdent>[`=>' <ident>]`\{'[<signatures>]`\}'<stmntEnd>
+
+<instance> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<stmntEnd>
+
+\end{grammar}
+
 \paragraph{Functions}
 
 \begin{grammar}
@@ -158,23 +177,6 @@
 <app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
 
 <lambda> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp><terminator>
-
-\end{grammar}
-
-\paragraph{Pattern Matching and Switches}
-
-\begin{grammar}
-
-<value> ::= <ident>`('[<value>[`,'<value>]]`)'
-\alt <prim>
-\alt `\_'
-
-<caseVal> ::= <ident>`:'<type>
-\alt <value>
-
-<match> ::= `match'`('<smp>`)' `\{'`case'<caseVal>`=>'<smp>[`case'<caseVal>`=>'<smp>]*`\}'
-
-<matchSwitch> ::= <match> | <switch>
 
 \end{grammar}
 
@@ -195,7 +197,7 @@
 \alt `if' `('<smp>`)' <smp> [`else' <smp>]
 \alt `List' | `Tuple' | `Array' | `Set' `\{'[<smp>[`,' <smp>]*]`\}'
 \alt `Dict' `\{'[<smp>`:'<smp>[`,' <smp>`:'<smp>]*]`\}'
-\alt <matchSwitch>
+\alt <match>
 \alt <typeclass>
 \alt <instance>
 \alt <alias>

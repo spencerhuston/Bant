@@ -381,10 +381,16 @@ object Parser {
     else Ref(curr, "$None$")
   }
 
-  def parseTypeclass: Exp = {
+  def parseTypeclass: Typeclass = {
     LOG(DEBUG, s"parseTypeclass: $curr")
     val token = curr
     matchRequired(TYPECLASS)
+
+    var isSealed = false
+    if (matchOptional(SEALED)) {
+      isSealed = true
+    }
+
     val typeclassIdent = matchIdent
     val genericTypes = parseGenerics
     val superclass = parseSuperType
@@ -399,7 +405,7 @@ object Parser {
     }
     matchStatementEndRequired()
 
-    Typeclass(token, typeclassIdent, genericTypes, superclass, signatures, parseExp)
+    Typeclass(token, isSealed, typeclassIdent, genericTypes, superclass, signatures, parseExp)
   }
 
   def parseInstance: Instance = {
@@ -431,6 +437,12 @@ object Parser {
     matchRequired(TYPE)
     val ident = matchIdent
     val generics = parseGenerics
+
+    var derivedFrom = Ref(curr, "$None$")
+    if (matchOptional(DERIVES)) {
+      derivedFrom = Ref(curr, matchIdent)
+    }
+
     matchRequired(LEFT_BRACE)
 
     val constructors = ArrayBuffer[Constructor]()
@@ -443,15 +455,28 @@ object Parser {
     }
 
     matchStatementEndRequired()
-    Adt(token, ident, generics, constructors, parseExp)
+    Adt(token, ident, generics, constructors, derivedFrom, parseExp)
   }
 
   def parseRecord: Exp = {
     LOG(DEBUG, s"parseRecord: $curr")
     val token = curr
     matchRequired(RECORD)
+
+    var isSealed = false
+    if (matchOptional(SEALED)) {
+      isSealed = true
+    }
+
     val ident = matchIdent
     val generics = parseGenerics
+    val superType = parseSuperType
+
+    var derivedFrom = Ref(curr, "$None$")
+    if (matchOptional(DERIVES)) {
+      derivedFrom = Ref(curr, matchIdent)
+    }
+
     matchRequired(LEFT_BRACE)
 
     val members = ArrayBuffer[Member]()
@@ -463,7 +488,7 @@ object Parser {
     }
 
     matchStatementEndRequired()
-    Record(token, ident, generics, members, parseExp)
+    Record(token, isSealed, ident, generics, superType, members, derivedFrom, parseExp)
   }
 
   def parseAlias: Alias = {
@@ -636,12 +661,15 @@ object Parser {
         val tmpExp = parseSimpleExp
         matchRequired(RIGHT_PAREN)
         tmpExp
-      case Ident(ident, _) =>
-        val token = curr
-        advance()
-        Ref(token, ident)
+      case Ident(_, _) =>
+        Ref(curr, matchIdent)
       case _ => parsePrim
     }
+  }
+
+  def parseApplication: Exp = {
+    LOG(DEBUG, s"parseApplication: $curr")
+    none
   }
 
   def parsePrim: Exp = {

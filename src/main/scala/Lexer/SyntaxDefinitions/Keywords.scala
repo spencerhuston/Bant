@@ -6,6 +6,8 @@ object Keywords extends Enumeration {
   val NULL: Keywords.Value = Value("null")
   val TYPE: Keywords.Value = Value("type")
   val RECORD: Keywords.Value = Value("record")
+  var SEALED: Keywords.Value = Value("sealed")
+  val DERIVES: Keywords.Value = Value("derives")
   val ALIAS: Keywords.Value = Value("alias")
   val TYPECLASS: Keywords.Value = Value("typeclass")
   val INSTANCE: Keywords.Value = Value("instance")

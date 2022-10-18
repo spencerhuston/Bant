@@ -339,11 +339,11 @@ class ParserTest extends AnyFlatSpec {
     val exp = getExp("src/test/testPrograms/ParserPrograms/dict_test.bnt")
     assert(exp.isInstanceOf[DictDef])
     val dict = exp.asInstanceOf[DictDef]
-    assert(dict.keys.length == 1)
-    assert(dict.keys(0).isInstanceOf[Lit] &&
-      dict.keys(0).asInstanceOf[Lit].value == IntVal(1))
-    assert(dict.values(0).isInstanceOf[Lit] &&
-      dict.values(0).asInstanceOf[Lit].value.toString == "CharVal('a')")
+    assert(dict.mapping.length == 1)
+    assert(dict.mapping(0).key.isInstanceOf[Lit] &&
+      dict.mapping(0).key.asInstanceOf[Lit].value == IntVal(1))
+    assert(dict.mapping(0).value.isInstanceOf[Lit] &&
+      dict.mapping(0).value.asInstanceOf[Lit].value.toString == "CharVal('a')")
   }
 
   "Parser.parseMatch" should "make a pattern match exp" in {
@@ -412,8 +412,8 @@ class ParserTest extends AnyFlatSpec {
     assert(funcDef.returnType == IntType())
     assert(funcDef.body.isInstanceOf[Ref])
     assert(funcDef.body.asInstanceOf[Ref].ident == "x")
-    assert(progExp.body.isInstanceOf[Let])
-    val progBody = progExp.body.asInstanceOf[Let]
+    assert(progExp.afterProg.isInstanceOf[Let])
+    val progBody = progExp.afterProg.asInstanceOf[Let]
     assert(!progBody.isLazy)
     assert(progBody.ident == "h")
     assert(progBody.letType.isInstanceOf[FuncType])
@@ -449,7 +449,7 @@ class ParserTest extends AnyFlatSpec {
     assert(caseExp.caseExp.isInstanceOf[Lit])
     assert(caseExp.caseExp.asInstanceOf[Lit].value == IntVal(0))
 
-    assert(progExp.body.isInstanceOf[NoOp])
+    assert(progExp.afterProg.isInstanceOf[NoOp])
   }
 
   "Parser.parseFuncClosure" should "parse closure made of function definitions" in {
@@ -462,8 +462,8 @@ class ParserTest extends AnyFlatSpec {
     assert(func.body.isInstanceOf[Prog])
     assert(func.body.asInstanceOf[Prog].funcs.length == 1)
     assert(func.body.asInstanceOf[Prog].funcs.head.ident == "b")
-    assert(func.body.asInstanceOf[Prog].body.isInstanceOf[Ref])
-    assert(func.body.asInstanceOf[Prog].body.asInstanceOf[Ref].ident == "b")
+    assert(func.body.asInstanceOf[Prog].afterProg.isInstanceOf[Ref])
+    assert(func.body.asInstanceOf[Prog].afterProg.asInstanceOf[Ref].ident == "b")
   }
 
   "Parser.parseLambdaClosure" should "parse closure made of lambdas" in {
@@ -489,7 +489,7 @@ class ParserTest extends AnyFlatSpec {
     val progExp = exp.asInstanceOf[Prog]
     assert(progExp.funcs.length == 4)
     assert(progExp.funcs.count(_.returnType == BoolType()) == 4)
-    assert(progExp.body.isInstanceOf[NoOp])
+    assert(progExp.afterProg.isInstanceOf[NoOp])
   }
 
   "Parser.parseSemicolonMulti" should "parse let expression with multiple semicolons" in {

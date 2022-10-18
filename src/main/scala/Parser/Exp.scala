@@ -48,13 +48,13 @@ case class NullVal() extends Val
 // Functions
 case class Prog(token: Token,
                 funcs: ArrayBuffer[FunDef],
-                body: Exp) extends Exp
+                afterProg: Exp) extends Exp
 case class FunDef(token: Token,
                   ident: String,
                   generics: ArrayBuffer[Generic],
                   params: ArrayBuffer[Parameter],
                   returnType: Type,
-                  afterProg: Exp) extends Exp
+                  body: Exp) extends Exp
 case class Generic(ident: String, lowerBound: String, upperBound: String)
 case class Parameter(token: Token,
                      ident: String,
@@ -62,18 +62,22 @@ case class Parameter(token: Token,
                      default: Exp) extends Exp
 case class App(token: Token) extends Exp
 
-// ADT
+// Types and Typeclasses
 case class Constructor(members: ArrayBuffer[Type])
 case class Adt(token: Token,
                ident: String,
                generics: ArrayBuffer[Generic],
                constructors: ArrayBuffer[Constructor],
+               derivedFrom: Ref,
                afterAdt: Exp) extends Exp
 case class Member(ident: String, memberType: Type)
 case class Record(token: Token,
+                  isSealed: Boolean,
                   ident: String,
                   generics: ArrayBuffer[Generic],
+                  superType: Ref,
                   members: ArrayBuffer[Member],
+                  derivedFrom: Ref,
                   afterRecord: Exp) extends Exp
 case class Alias(token: Token,
                  alias: String,
@@ -81,6 +85,7 @@ case class Alias(token: Token,
                  afterAlias: Exp) extends Exp
 case class Signature(name: Ref, funcType: Type)
 case class Typeclass(token: Token,
+                     isSealed: Boolean,
                      ident: String,
                      genericTypes: ArrayBuffer[Generic],
                      superclass: Ref,

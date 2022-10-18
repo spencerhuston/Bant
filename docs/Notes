@@ -2,30 +2,16 @@ TYPECLASS TODO:
 1. ADT derive from typeclass
 2. Typeclass superclass
 3. Type in multiple typeclasses
+4. Sealed typeclasses
 
 ADT TODO:
 1. Grammar
-2. Supertypes
-3. Self-reference
-4. Pipe operator for product types
-5. Nameless types
-6. Records
-
-type Some[T] { T };
-type None { };
-
-type Option[T] {
-    Some[T] | None
-};
-
-type Person {
-    int, string | Gender
-};
-
-record Person {
-    age: int,
-    name: string
-};
+2. Self-reference
+3. Pipe operator for product types
+4. Nameless types
+5. Records
+6. Record inheritance
+7. Sealed records
 
 Function Application TODO:
 1. Regular calls
@@ -38,6 +24,7 @@ Function Application TODO:
 General TODO:
 1. More type-tagging during parsing phase
 2. Extend Exp into Statement to automatically parse ; and after-exp
+3. Modules
 
 Other Notes:
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined

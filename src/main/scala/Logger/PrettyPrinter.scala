@@ -1,9 +1,6 @@
 package Logger
 
-import Lexer.Delimiter
-import Lexer.SyntaxDefinitions.Delimiters
 import Parser._
-import TypeChecker.Type
 
 import scala.collection.mutable.ArrayBuffer
 import scala.Console.{RESET, YELLOW}
