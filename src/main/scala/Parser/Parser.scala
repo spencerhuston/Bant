@@ -205,6 +205,7 @@ object Parser {
       case Keyword(TYPECLASS, _, _) => parseTypeclass
       case Keyword(INSTANCE, _, _) => parseInstance
       case Keyword(TYPE, _, _) => parseAdt
+      case Keyword(ALIAS, _, _) => parseAlias
       case Keyword(FN, _, _) => parseProg
       case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
       case Delimiter(Delimiters.OR, _, _) => parseLambda
@@ -426,6 +427,16 @@ object Parser {
   def parseAdt: Exp = {
     LOG(DEBUG, s"parseAdt: $curr")
     none
+  }
+
+  def parseAlias: Alias = {
+    LOG(DEBUG, s"parseAlias: $curr")
+    val token = curr
+    advance()
+    val alias = matchIdent
+    matchRequired(ASSIGNMENT)
+    val actualType = parseType
+    Alias(token, alias, actualType)
   }
 
   def parseProg: Prog = {

@@ -4,7 +4,22 @@ TYPECLASS TODO:
 3. Type in multiple typeclasses
 
 ADT TODO:
-1.
+1. Grammar
+2. Supertypes
+3. Self-reference
+4. Pipe operator for product types
+
+Function Application TODO:
+1. Regular calls
+2. Curried calls
+3. Chained calls with bird operator
+4. Calls with generics is optional/polymorphic inference based on arguments
+5. Collection access
+6. ADT construction
+
+General TODO:
+1. More type-tagging during parsing phase
+2. Type aliasing
 
 
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined
@@ -16,22 +31,6 @@ ADT TODO:
 - Polymorhpic parameter as a part of type syntax
 - Polymorphic inference, ex: print[int](5) to print(5). [] is omitted due to inference of parameter type
 
-# overloaded methods
-instance Car : VehiclesMethods = {
-    fn getWheels() -> int = 4
-    fn getYear() -> int = 2022
-}
-
-type Semi : Vehicle { }
-
-val v: Vehicle = Car(4, 2020)
-val v2: Vehicle = Semi(14, 2015)
-
-println(v.getYear()) # 2022 - uses overloaded typeclass method to get literal value '2022' instead of this.wheels
-println(v2.getYear()) # 2015 - uses typeclass method from Vehicle super-type
-
-type Bike { wheels: int }
-
 # Bounding polymorhpic type T to Vehicle subclasses
 fn printWheels[T :> Vehicle](v: T) -> null = {
     println(v.wheels)
@@ -40,7 +39,7 @@ fn printWheels[T :> Vehicle](v: T) -> null = {
 fn makeCar() -> Car = Car(4, 2012)
 
 # bird operator for function chaining
-makeCar() |> printWheels[Car]()
+makeCar() |> printWheels()
 
 # Bounded type-list
 fn collHead[T :> { List, Array, Tuple, Set }, U](coll: T[U]) -> U = {

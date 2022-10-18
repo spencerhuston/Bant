@@ -64,6 +64,9 @@ case class App(token: Token) extends Exp
 
 // ADT
 case class Adt(token: Token) extends Exp
+case class Alias(token: Token,
+                 alias: String,
+                 actualType: Type) extends Exp
 case class Typeclass(token: Token,
                      ident: String,
                      genericTypes: ArrayBuffer[Generic],
