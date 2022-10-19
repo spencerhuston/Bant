@@ -69,19 +69,19 @@
 
 \end{grammar}
 
-\paragraph{Primitive Types}
+\paragraph{Literals}
 
 \begin{grammar}
 
-<int> ::= [ integer ]
+<\textbf{int}> ::= [ integer ]
 
-<bool> ::= `true' | `false'
+<\textbf{bool}> ::= `true' | `false'
 
-<char> ::= <singleQuote>[ character ]<singleQuote>
+<\textbf{char}> ::= <singleQuote>[ character ]<singleQuote>
 
-<string> ::= <doubleQuote>[ character* ]<doubleQuote>
+<\textbf{string}> ::= <doubleQuote>[ character* ]<doubleQuote>
 
-<null> ::= `null'
+<\textbf{null}> ::= `null'
 
 \end{grammar}
 
@@ -89,7 +89,7 @@
 
 \begin{grammar}
 
-<type> ::= `int' | `bool' | `char' | `string' | `null'
+<\textbf{type}> ::= `int' | `bool' | `char' | `string' | `null'
 \alt <type> `->' <type>
 \alt `('[<type>[`,' <type>]*]`)' `->' `('[<type>[`,' <type>]*]`)'
 \alt `List' | `Array' | `Set' `['<type>`]'
@@ -103,11 +103,11 @@
 
 \begin{grammar}
 
-<arithOp> ::= `+' | `-' | `*' | `/' | `\%'
+<\textbf{arithOp}> ::= `+' | `-' | `*' | `/' | `\%'
 
-<boolOp> ::= `<' | `>' | `<=' | `>=' | `!' | `!=' | `==' | `\&\&' | `||'
+<\textbf{boolOp}> ::= `<' | `>' | `<=' | `>=' | `!' | `!=' | `==' | `\&\&' | `||'
 
-<op> ::= <arithOp> | <boolOp> 
+<\textbf{op}> ::= <arithOp> | <boolOp> 
 
 \end{grammar}
 
@@ -115,14 +115,14 @@
 
 \begin{grammar}
 
-<value> ::= <ident>`('[<value>[`,'<value>]]`)'
+<\textbf{value}> ::= <ident>`('[<value>[`,'<value>]]`)'
 \alt <prim>
 \alt `\_'
 
-<caseVal> ::= <ident>`:'<type>
+<\textbf{caseVal}> ::= <ident>`:'<type>
 \alt <value>
 
-<match> ::= `match'`('<smp>`)' `\{'`case'<caseVal>`=>'<smp>[`case'<caseVal>`=>'<smp>]*`\}'
+<\textbf{match}> ::= `match'`('<smp>`)' `\{'`case'<caseVal>`=>'<smp>[`case'<caseVal>`=>'<smp>]*`\}'
 
 \end{grammar}
 
@@ -130,7 +130,7 @@
 
 \begin{grammar}
 
-<alias> ::= `alias' <ident> `=' <type>
+<\textbf{alias}> ::= `alias' <ident> `=' <type>
 
 <lowerBoundOp> ::= `:>'
 
@@ -150,17 +150,17 @@
 
 <cosntructorList> ::= <constructor>[`|'<constructor>]
 
-<adt> ::= `type' <genericIdent>[<derive>]`\{'[<cosntructorLists>]`\}'<stmntEnd>
+<\textbf{adt}> ::= `type' <genericIdent>[<derive>]`\{'[<cosntructorLists>]`\}'<stmntEnd>
 
 <members> ::= <ident>`:'<type>[`,'<ident>`:'<type>]*
 
-<record> ::= `record'[`sealed']<genericIdent>[`=>'<genericIdent>][<derive>]`\{'[<members>]`\}'<stmntEnd>
+<\textbf{record}> ::= `record'[`sealed']<genericIdent>[`=>'<genericIdent>][<derive>]`\{'[<members>]`\}'<stmntEnd>
 
 <signatures> ::= <ident>`='<type>[`,'<ident>`='<type>]*
  
-<typeclass> ::= `typeclass'[`sealed']<genericIdent>[`=>' <ident>]`\{'[<signatures>]`\}'<stmntEnd>
+<\textbf{typeclass}> ::= `typeclass'[`sealed']<genericIdent>[`=>' <ident>]`\{'[<signatures>]`\}'<stmntEnd>
 
-<instance> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<stmntEnd>
+<\textbf{instance}> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<stmntEnd>
 
 \end{grammar}
 
@@ -170,13 +170,13 @@
 
 <param> ::= <ident>`:'<type>[`=' <atom> | <collection>]
 
-<funDef> ::= `fn' <genericIdent>`('[<param> [`,' <param>]* ]`)'[`->'<type>]`='<smp><terminator>
+<\textbf{funDef}> ::= `fn' <genericIdent>`('[<param> [`,' <param>]* ]`)'[`->'<type>]`='<smp><terminator>
 
 <prog> ::= [<funDef>]*<exp>
 
-<app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
+<\textbf{app}> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
 
-<lambda> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp><terminator>
+<\textbf{lambda}> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp>
 
 \end{grammar}
 
@@ -198,11 +198,11 @@
 \alt `List' | `Tuple' | `Array' | `Set' `\{'[<smp>[`,' <smp>]*]`\}'
 \alt `Dict' `\{'[<smp>`:'<smp>[`,' <smp>`:'<smp>]*]`\}'
 \alt <match>
-\alt <typeclass>
-\alt <instance>
 \alt <alias>
 \alt <adt>
 \alt <record>
+\alt <typeclass>
+\alt <instance>
 \alt <prog>
 \alt <lambda>
 

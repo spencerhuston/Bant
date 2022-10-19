@@ -582,7 +582,7 @@ object Parser {
     }
   }
 
-  def parseLambda: Let = {
+  def parseLambda: Prog = {
     LOG(DEBUG, s"parseLambda: $curr")
     val token = curr
     var emptyParams = false
@@ -602,14 +602,9 @@ object Parser {
     val returnType: Type = parseType
     matchRequired(ASSIGNMENT)
     val body = parseSimpleExp
-    matchStatementEndRequired()
 
-    Let(token,
-        isLazy = false,
-        ident,
-        UnknownType(),
-        FunDef(token, ident + "_def", ArrayBuffer[Generic](), params, returnType, body),
-        Ref(token, ident + "_def"))
+    val funDefIdent = ident + "_def"
+    Prog(token, ArrayBuffer[FunDef](FunDef(token, funDefIdent, ArrayBuffer[Generic](), params, returnType, body)), Ref(token, funDefIdent))
   }
 
   def parseUtight(min: Int): Exp = {

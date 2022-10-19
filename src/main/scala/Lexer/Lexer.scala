@@ -132,7 +132,6 @@ object Lexer {
     if (Math.abs(score) < 0.5 ||
       minCharacterOffCount == 1 ||
       minCharacterOffCountReverse == 1) {
-      //println(s"$str: $score, $minCharacterOffCount, $minCharacterOffCountReverse")
       warnIdentForKeyword(s"Warning: $str: Did you mean $closestKeyword?", str)
     }
   }
