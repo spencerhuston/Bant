@@ -73,6 +73,11 @@ class ParserTest extends AnyFlatSpec {
     assert(!isEof)
   }
 
+  "Parser.matchStatementEndRequired" should "report bad match if not terminator" in {
+    // TODO
+    assert(false)
+  }
+
   "Parser.matchRequired" must "return true if match is made and advance" in {
     clear()
     tokenStream = Lexer.Lexer.scan("val")
@@ -168,26 +173,19 @@ class ParserTest extends AnyFlatSpec {
     assert(getPrecedence(GREATER_THAN) == 1)
   }
 
-  "Parser.dummyLet" must "return nested dummy lets" in {
-    val exp = getExp("src/test/testPrograms/ParserPrograms/dummy_let_test.bnt")
-    assert(exp.isInstanceOf[Let])
-    val let = exp.asInstanceOf[Let]
-    assert(!let.isLazy)
-    assert(let.ident == "dummy$1")
-    assert(let.letType == IntType())
-    assert(let.expType == UnknownType())
-    assert(let.expValue.isInstanceOf[Lit])
-    assert(let.expValue.asInstanceOf[Lit].value == IntVal(2))
-    assert(let.afterLet.isInstanceOf[Let])
+  "Parser.dummy" must "return dummy name" in {
+    clear()
+    assert(dummy == "dummy$0")
+  }
 
-    val let2 = let.afterLet.asInstanceOf[Let]
-    assert(!let2.isLazy)
-    assert(let2.ident == "dummy$0")
-    assert(let2.letType == IntType())
-    assert(let2.expType == UnknownType())
-    assert(let2.expValue.isInstanceOf[Lit])
-    assert(let2.expValue.asInstanceOf[Lit].value == IntVal(3))
-    assert(let2.afterLet.isInstanceOf[NoOp])
+  "Parser.anon" must "return anon name" in {
+    clear()
+    assert(anon == "anon$0")
+  }
+
+  "Parser.parse" must "catch OOB exception" in {
+    // TODO
+    assert(false)
   }
 
   "Parser.parseExp" must "return simplest let when given tokens" in {
@@ -243,6 +241,50 @@ class ParserTest extends AnyFlatSpec {
     val exp = getExp("src/test/testPrograms/ParserPrograms/lit_test.bnt")
     assert(exp.isInstanceOf[Lit])
     assert(exp.asInstanceOf[Lit].value == IntVal(5))
+  }
+
+  it must "return NoOp if hits OOB" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse let expression with multiple semicolons" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_multi_parse_test.bnt")
+    assert(exp.isInstanceOf[Let])
+    val letExp = exp.asInstanceOf[Let]
+    assert(letExp.ident == "a")
+    assert(letExp.afterLet.isInstanceOf[Let])
+    val letExp2 = letExp.afterLet.asInstanceOf[Let]
+    assert(letExp2.ident == "dummy$2")
+    assert(letExp2.afterLet.isInstanceOf[Let])
+    val letExp3 = letExp2.afterLet.asInstanceOf[Let]
+    assert(letExp3.ident == "dummy$1")
+    assert(letExp3.afterLet.isInstanceOf[Let])
+    val letExp4 = letExp3.afterLet.asInstanceOf[Let]
+    assert(letExp4.ident == "dummy$0")
+    assert(letExp4.afterLet.isInstanceOf[NoOp])
+  }
+
+  "Parser.dummyLet" must "return nested dummy lets" in {
+    val exp = getExp("src/test/testPrograms/ParserPrograms/dummy_let_test.bnt")
+    assert(exp.isInstanceOf[Let])
+    val let = exp.asInstanceOf[Let]
+    assert(!let.isLazy)
+    assert(let.ident == "dummy$1")
+    assert(let.letType == IntType())
+    assert(let.expType == UnknownType())
+    assert(let.expValue.isInstanceOf[Lit])
+    assert(let.expValue.asInstanceOf[Lit].value == IntVal(2))
+    assert(let.afterLet.isInstanceOf[Let])
+
+    val let2 = let.afterLet.asInstanceOf[Let]
+    assert(!let2.isLazy)
+    assert(let2.ident == "dummy$0")
+    assert(let2.letType == IntType())
+    assert(let2.expType == UnknownType())
+    assert(let2.expValue.isInstanceOf[Lit])
+    assert(let2.expValue.asInstanceOf[Lit].value == IntVal(3))
+    assert(let2.afterLet.isInstanceOf[NoOp])
   }
 
   "Parser.parseLet" must "return simplest let when given tokens" in {
@@ -346,6 +388,11 @@ class ParserTest extends AnyFlatSpec {
       dict.mapping(0).value.asInstanceOf[Lit].value.toString == "CharVal('a')")
   }
 
+  it should "report unexpected" in {
+    // TODO
+    assert(false)
+  }
+
   "Parser.parseMatch" should "make a pattern match exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/match_test.bnt")
     assert(exp.isInstanceOf[Match])
@@ -364,7 +411,67 @@ class ParserTest extends AnyFlatSpec {
       matchExp.cases(1).caseExp.asInstanceOf[Lit].value == IntVal(0))
   }
 
-  "Parser.parseFunctionDefinition" should "parse 1 function definition" in {
+  it should "parse match with type case" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse match with reference value case" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "throw error in bad match literal value case" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.warnAnyCase" should "warn against multiple wildcard cases" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "warn against match without wildcard" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "warn against match where wildcard is not the last pattern" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseAlias" should "parse typeclass" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseAdt" should "parse typeclass" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseRecord" should "parse typeclass" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseSuperType" should "parse typeclass with a super typeclass" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseTypeclass" should "parse typeclass" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseInstance" should "parse typeclass" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseProg" should "parse 1 function definition" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/func_def_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val funcDef = exp.asInstanceOf[Prog].funcs.head
@@ -376,7 +483,12 @@ class ParserTest extends AnyFlatSpec {
     assert(funcDef.body.asInstanceOf[Lit].value == IntVal(2))
   }
 
-  "Parser.parseFunctionWithDefaultParam" should "parse 1 function with a default parameter" in {
+  it should "parse function with parametric type bounds" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse 1 function with a default parameter" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/func_default_value_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
@@ -397,7 +509,7 @@ class ParserTest extends AnyFlatSpec {
     assert(funcDef.body.asInstanceOf[Prim].right.asInstanceOf[Lit].value == IntVal(2))
   }
 
-  "Parser.parseSimpleGenericFunction" should "parse 1 polymorphic function program exp" in {
+  it should "parse 1 polymorphic function program exp" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/generic_func_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
@@ -427,7 +539,7 @@ class ParserTest extends AnyFlatSpec {
     assert(progBody.afterLet.isInstanceOf[NoOp])
   }
 
-  "Parser.parseMatchInsideFuncDef" should "parse a match expression inside a function definition" in {
+  it should "parse a match expression inside a function definition" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/match_inside_func_def_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
@@ -452,7 +564,7 @@ class ParserTest extends AnyFlatSpec {
     assert(progExp.afterProg.isInstanceOf[NoOp])
   }
 
-  "Parser.parseFuncClosure" should "parse closure made of function definitions" in {
+  it should "parse closure made of function definitions" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/func_closure_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val prog = exp.asInstanceOf[Prog]
@@ -466,7 +578,12 @@ class ParserTest extends AnyFlatSpec {
     assert(func.body.asInstanceOf[Prog].afterProg.asInstanceOf[Ref].ident == "b")
   }
 
-  "Parser.parseLambdaClosure" should "parse closure made of lambdas" in {
+  "Parser.parseLambda" should "parse lambda without parameters" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse closure made of lambdas" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/lambda_closure_test.bnt")
     assert(exp.isInstanceOf[Let])
     val let = exp.asInstanceOf[Let]
@@ -483,7 +600,7 @@ class ParserTest extends AnyFlatSpec {
     assert(lambda2.expValue.asInstanceOf[FunDef].body.isInstanceOf[Prim])
   }
 
-  "Parser.parseSemicolon" should "parse multiple function definitions with optional semicolons" in {
+  it should "parse multiple function definitions with optional semicolons" in {
     val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_parsing_test.bnt")
     assert(exp.isInstanceOf[Prog])
     val progExp = exp.asInstanceOf[Prog]
@@ -492,30 +609,93 @@ class ParserTest extends AnyFlatSpec {
     assert(progExp.afterProg.isInstanceOf[NoOp])
   }
 
-  "Parser.parseSemicolonMulti" should "parse let expression with multiple semicolons" in {
-    val exp = getExp("src/test/testPrograms/ParserPrograms/semicolon_multi_parse_test.bnt")
-    assert(exp.isInstanceOf[Let])
-    val letExp = exp.asInstanceOf[Let]
-    assert(letExp.ident == "a")
-    assert(letExp.afterLet.isInstanceOf[Let])
-    val letExp2 = letExp.afterLet.asInstanceOf[Let]
-    assert(letExp2.ident == "dummy$2")
-    assert(letExp2.afterLet.isInstanceOf[Let])
-    val letExp3 = letExp2.afterLet.asInstanceOf[Let]
-    assert(letExp3.ident == "dummy$1")
-    assert(letExp3.afterLet.isInstanceOf[Let])
-    val letExp4 = letExp3.afterLet.asInstanceOf[Let]
-    assert(letExp4.ident == "dummy$0")
-    assert(letExp4.afterLet.isInstanceOf[NoOp])
+  "Parser.parseUtight" should "parse unary NOT" in {
+    // TODO
+    assert(false)
   }
 
-  "Parser.dummy" must "return dummy name" in {
-    clear()
-    assert(dummy == "dummy$0")
+  it should "parse unary MINUS" in {
+    // TODO
+    assert(false)
   }
 
-  "Parser.anon" must "return anon name" in {
-    clear()
-    assert(anon == "anon$0")
+  "Parser.parseApplication" should "parse function application" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseAtom" should "parse parentheses enclosed expression" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse tuple access" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseLit" should "parse null literal" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse string literal" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "throw error on unexpected" in {
+    // TODO
+    assert(false)
+  }
+
+  "Parser.parseType" should "parse char type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse string type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse null type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse list type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse array type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse set type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse dict type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse tuple type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "parse ident type" in {
+    // TODO
+    assert(false)
+  }
+
+  it should "report bad type" in {
+    // TODO
+    assert(false)
   }
 }

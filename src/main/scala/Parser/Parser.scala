@@ -129,6 +129,18 @@ object Parser {
     else 1
   }
 
+  def dummy: String = {
+    val dummyIdent = s"dummy$$$dummyCount"
+    dummyCount += 1
+    dummyIdent
+  }
+
+  def anon: String = {
+    val anonIdent = s"anon$$$anonCount"
+    anonCount += 1
+    anonIdent
+  }
+
   def parse(tokens: ArrayBuffer[Token]): Exp = {
     tokenStream = tokens
 
@@ -202,11 +214,11 @@ object Parser {
       case Keyword(TUPLE, _, _) => parseCollectionValue
       case Keyword(DICT, _, _) => parseCollectionValue
       case Keyword(MATCH, _, _) => parseMatch
-      case Keyword(TYPECLASS, _, _) => parseTypeclass
-      case Keyword(INSTANCE, _, _) => parseInstance
+      case Keyword(ALIAS, _, _) => parseAlias
       case Keyword(TYPE, _, _) => parseAdt
       case Keyword(RECORD, _, _) => parseRecord
-      case Keyword(ALIAS, _, _) => parseAlias
+      case Keyword(TYPECLASS, _, _) => parseTypeclass
+      case Keyword(INSTANCE, _, _) => parseInstance
       case Keyword(FN, _, _) => parseProg
       case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
       case Delimiter(Delimiters.OR, _, _) => parseLambda
@@ -365,7 +377,7 @@ object Parser {
     if (count > 1)
       warn(token, "Wildcard occurs more than once")
     else if (count == 0)
-      warn(token, "Match is not exhaustive")
+      warn(token, "Match is not exhaustive, missing wildcard case")
 
     token = cases(0).token
     if (cases.indexWhere((c: Case) => {
@@ -378,59 +390,15 @@ object Parser {
     }
   }
 
-  def parseSuperType: Ref = {
-    if (matchOptional(CASE_EXP)) Ref(curr, matchIdent)
-    else Ref(curr, "$None$")
-  }
-
-  def parseTypeclass: Typeclass = {
-    LOG(DEBUG, s"parseTypeclass: $curr")
+  def parseAlias: Alias = {
+    LOG(DEBUG, s"parseAlias: $curr")
     val token = curr
-    matchRequired(TYPECLASS)
-
-    var isSealed = false
-    if (matchOptional(SEALED)) {
-      isSealed = true
-    }
-
-    val typeclassIdent = matchIdent
-    val genericTypes = parseGenerics
-    val superclass = parseSuperType
-
-    matchRequired(LEFT_BRACE)
-    val signatures = ArrayBuffer[Signature]()
-    while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
-      val name = Ref(curr, matchIdent)
-      matchRequired(ASSIGNMENT)
-      val signature = parseType
-      signatures += Signature(name, signature)
-    }
+    matchRequired(ALIAS)
+    val alias = matchIdent
+    matchRequired(ASSIGNMENT)
+    val actualType = parseType
     matchStatementEndRequired()
-
-    Typeclass(token, isSealed, typeclassIdent, genericTypes, superclass, signatures, parseExp)
-  }
-
-  def parseInstance: Instance = {
-    LOG(DEBUG, s"parseInstance: $curr")
-    val token = curr
-    matchRequired(INSTANCE)
-    val adtIdent = Ref(curr, matchIdent)
-    matchRequired(COLON)
-
-    val typeclassIdents = ArrayBuffer[Ref]()
-    typeclassIdents += Ref(curr, matchIdent)
-    while (matchOptional(COMMA)) {
-      typeclassIdents += Ref(curr, matchIdent)
-    }
-
-    matchRequired(LEFT_BRACE)
-    val funcs = ArrayBuffer[FunDef]()
-    while (matchOptional(FN)) {
-      funcs += parseFunDef
-    }
-    matchRequired(RIGHT_BRACE)
-    matchStatementEndRequired()
-    Instance(token, adtIdent, typeclassIdents, funcs, parseExp)
+    Alias(token, alias, actualType, parseExp)
   }
 
   def parseAdt: Adt = {
@@ -493,15 +461,59 @@ object Parser {
     Record(token, isSealed, ident, generics, superType, derivedFrom, members, parseExp)
   }
 
-  def parseAlias: Alias = {
-    LOG(DEBUG, s"parseAlias: $curr")
+  def parseSuperType: Ref = {
+    if (matchOptional(CASE_EXP)) Ref(curr, matchIdent)
+    else Ref(curr, "$None$")
+  }
+
+  def parseTypeclass: Typeclass = {
+    LOG(DEBUG, s"parseTypeclass: $curr")
     val token = curr
-    matchRequired(ALIAS)
-    val alias = matchIdent
-    matchRequired(ASSIGNMENT)
-    val actualType = parseType
+    matchRequired(TYPECLASS)
+
+    var isSealed = false
+    if (matchOptional(SEALED)) {
+      isSealed = true
+    }
+
+    val typeclassIdent = matchIdent
+    val genericTypes = parseGenerics
+    val superclass = parseSuperType
+
+    matchRequired(LEFT_BRACE)
+    val signatures = ArrayBuffer[Signature]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
+      val name = Ref(curr, matchIdent)
+      matchRequired(ASSIGNMENT)
+      val signature = parseType
+      signatures += Signature(name, signature)
+    }
     matchStatementEndRequired()
-    Alias(token, alias, actualType, parseExp)
+
+    Typeclass(token, isSealed, typeclassIdent, genericTypes, superclass, signatures, parseExp)
+  }
+
+  def parseInstance: Instance = {
+    LOG(DEBUG, s"parseInstance: $curr")
+    val token = curr
+    matchRequired(INSTANCE)
+    val adtIdent = Ref(curr, matchIdent)
+    matchRequired(COLON)
+
+    val typeclassIdents = ArrayBuffer[Ref]()
+    typeclassIdents += Ref(curr, matchIdent)
+    while (matchOptional(COMMA)) {
+      typeclassIdents += Ref(curr, matchIdent)
+    }
+
+    matchRequired(LEFT_BRACE)
+    val funcs = ArrayBuffer[FunDef]()
+    while (matchOptional(FN)) {
+      funcs += parseFunDef
+    }
+    matchRequired(RIGHT_BRACE)
+    matchStatementEndRequired()
+    Instance(token, adtIdent, typeclassIdents, funcs, parseExp)
   }
 
   def parseProg: Prog = {
@@ -512,29 +524,6 @@ object Parser {
       funcs += parseFunDef
     }
     Prog(token, funcs, parseExp)
-  }
-
-  def parseFunDef: FunDef = {
-    LOG(DEBUG, s"parseFunDef: $curr")
-
-    val token = curr
-    val ident = matchIdent
-    val genericTypes = parseGenerics
-
-    matchRequired(LEFT_PAREN)
-    val params = ArrayBuffer[Parameter]()
-    while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN)) {
-      params += parseParameter
-    }
-
-    matchRequired(RETURN_TYPE)
-    val returnType = parseType
-
-    matchRequired(ASSIGNMENT)
-    val body = parseSimpleExp
-    matchStatementEndRequired()
-
-    FunDef(token, ident, genericTypes, params, returnType, body)
   }
 
   def parseGenerics: ArrayBuffer[Generic] = {
@@ -580,6 +569,29 @@ object Parser {
       case Keyword(DICT, _, _) => parseCollectionValue
       case _ => parseAtom
     }
+  }
+
+  def parseFunDef: FunDef = {
+    LOG(DEBUG, s"parseFunDef: $curr")
+
+    val token = curr
+    val ident = matchIdent
+    val genericTypes = parseGenerics
+
+    matchRequired(LEFT_PAREN)
+    val params = ArrayBuffer[Parameter]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN)) {
+      params += parseParameter
+    }
+
+    matchRequired(RETURN_TYPE)
+    val returnType = parseType
+
+    matchRequired(ASSIGNMENT)
+    val body = parseSimpleExp
+    matchStatementEndRequired()
+
+    FunDef(token, ident, genericTypes, params, returnType, body)
   }
 
   def parseLambda: Prog = {
@@ -792,14 +804,6 @@ object Parser {
         val setType = parseType
         matchRequired(RIGHT_BRACKET)
         SetType(setType)
-      case Keyword(DICT, _, _) =>
-        advance()
-        matchRequired(LEFT_BRACKET)
-        val keyType = parseType
-        matchRequired(COMMA)
-        val valueType = parseType
-        matchRequired(RIGHT_BRACKET)
-        DictType(keyType, valueType)
       case Keyword(TUPLE, _, _) =>
         advance()
         matchRequired(LEFT_BRACKET)
@@ -808,6 +812,14 @@ object Parser {
           tupleTypes += parseType
         matchRequired(RIGHT_BRACKET)
         TupleType(tupleTypes)
+      case Keyword(DICT, _, _) =>
+        advance()
+        matchRequired(LEFT_BRACKET)
+        val keyType = parseType
+        matchRequired(COMMA)
+        val valueType = parseType
+        matchRequired(RIGHT_BRACKET)
+        DictType(keyType, valueType)
       case Delimiter(LEFT_PAREN, _, _) =>
         matchRequired(LEFT_PAREN)
         val argTypes = ArrayBuffer[Type]()
@@ -836,18 +848,6 @@ object Parser {
       FuncType(ArrayBuffer(expType), returnType)
     } else
       expType
-  }
-
-  def dummy: String = {
-    val dummyIdent = s"dummy$$$dummyCount"
-    dummyCount += 1
-    dummyIdent
-  }
-
-  def anon: String = {
-    val anonIdent = s"anon$$$anonCount"
-    anonCount += 1
-    anonIdent
   }
 
   def reportBadMatch(token: Token, expected: String, note: String = ""): Unit = {

@@ -3,6 +3,50 @@ TODO:
 - Bird operator
 - Modules/Imports
 
+Parser Tests TODO:
+- matchStatementEndRequired: bad match
+- peek: no match
+- parse: IndexOutOfBoundsException
+- parseExp: OOB
+- parseCollectionValue: Unexpected
+- parseCasePattern: Ident as type
+- parseValueCase: Ident as value
+- parseValueCase: parseLit noOp
+- warnAnyCase: wildcard occurs or no wildcard case
+- warnAnyCase: wildcard is not last pattern
+- parseSuperType
+- parseTypeclass
+- parseInstance
+- parseAdt
+- parseRecord
+- parseAlias
+- parseGenerics: type bounds exist
+- parseLambda: no parameters
+- parseUtight: unary not or minus
+- parseArguments
+- parseApplication
+- parseTupleAccessIndex
+- parseAtom: parentheses enclosed
+- parseAtom: tupleAccess
+- parseLit: null
+- parseLit: string
+- parseLit: Unexpected
+- parseType: char
+- parseType: string
+- parseType: null
+- parseType: list
+- parseType: array
+- parseType: set
+- parseType: dict
+- parseType: tuple
+- parseType: parentheses enclosed
+- parseType: ident
+- parseType: bad type
+- reportBadMatch
+- reportBadType
+- reportUnexpected
+- warn
+
 Other Notes:
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined
 - Only 1 typeclass per adt?
