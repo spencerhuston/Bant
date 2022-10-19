@@ -133,10 +133,12 @@ case class LitCase(value: Val) extends ValueCasePattern
 case class AnyCase() extends ValueCasePattern
 
 // Pattern Matching
-case class NoOp(token: Token) extends Exp
 case class Match(token: Token,
                  value: Exp,
                  cases: ArrayBuffer[Case]) extends Exp
 case class Case(token: Token,
                 casePattern: CasePattern,
                 caseExp: Exp) extends Exp
+
+// None - Error occurred or EOF
+case class NoOp(token: Token) extends Exp

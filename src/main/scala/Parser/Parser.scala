@@ -156,9 +156,6 @@ object Parser {
 
   def parseExp: Exp = {
     LOG(DEBUG, s"parseExp: $curr")
-    if (!inBounds)
-      none
-
     curr match {
         case Keyword(VAL, _, _) =>
           parseLet
