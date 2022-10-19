@@ -1,30 +1,7 @@
-TYPECLASS TODO:
-1. ADT derive from typeclass
-2. Typeclass superclass
-3. Type in multiple typeclasses
-4. Sealed typeclasses
-
-ADT TODO:
-1. Grammar
-2. Self-reference
-3. Pipe operator for product types
-4. Nameless types
-5. Records
-6. Record inheritance
-7. Sealed records
-
-Function Application TODO:
-1. Regular calls
-2. Curried calls
-3. Chained calls with bird operator
-4. Calls with generics is optional/polymorphic inference based on arguments
-5. Collection access
-6. ADT construction
-
-General TODO:
-1. More type-tagging during parsing phase
-2. Extend Exp into Statement to automatically parse ; and after-exp
-3. Modules
+TODO:
+- Bird operator
+- More type-tagging during parsing phase
+- Modules/Imports
 
 Other Notes:
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined

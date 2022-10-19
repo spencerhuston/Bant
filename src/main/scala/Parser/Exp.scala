@@ -60,15 +60,23 @@ case class Parameter(token: Token,
                      ident: String,
                      paramType: Type,
                      default: Exp) extends Exp
-case class App(token: Token) extends Exp
+case class App(token: Token,
+               ident: Exp,
+               genericParameters: ArrayBuffer[Type],
+               arguments: ArrayBuffer[Exp]) extends Exp
+case class Bird(token: Token,
+                apps: ArrayBuffer[App]) extends Exp
+case class TupleAccess(token: Token,
+                       ref: Exp,
+                       accessIndex: IntVal) extends Exp
 
 // Types and Typeclasses
 case class Constructor(members: ArrayBuffer[Type])
 case class Adt(token: Token,
                ident: String,
                generics: ArrayBuffer[Generic],
-               constructors: ArrayBuffer[Constructor],
                derivedFrom: Ref,
+               constructors: ArrayBuffer[Constructor],
                afterAdt: Exp) extends Exp
 case class Member(ident: String, memberType: Type)
 case class Record(token: Token,
@@ -76,8 +84,8 @@ case class Record(token: Token,
                   ident: String,
                   generics: ArrayBuffer[Generic],
                   superType: Ref,
-                  members: ArrayBuffer[Member],
                   derivedFrom: Ref,
+                  members: ArrayBuffer[Member],
                   afterRecord: Exp) extends Exp
 case class Alias(token: Token,
                  alias: String,
@@ -109,7 +117,6 @@ case class TupleDef(token: Token,
 case class Map(key: Exp, value: Exp)
 case class DictDef(token: Token,
                    mapping: ArrayBuffer[Map]) extends Exp
-case class BlockGet(token: Token) extends Exp
 
 // Pattern Matching
 case class Match(token: Token,

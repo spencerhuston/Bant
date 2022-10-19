@@ -7,7 +7,7 @@ object Delimiters extends Enumeration {
   val DIVIDE: Delimiters.Value = Value("/")
   val MODULUS: Delimiters.Value = Value("%")
 
-  val arithmeticOperators: Delimiters.ValueSet = ValueSet(PLUS, MINUS, MULTIPLY, DIVIDE)
+  val arithmeticOperators: Delimiters.ValueSet = ValueSet(PLUS, MINUS, MULTIPLY, DIVIDE, MODULUS)
 
   val LESS_THAN: Delimiters.Value = Value("<")
   val GREATER_THAN: Delimiters.Value = Value(">")
@@ -38,6 +38,7 @@ object Delimiters extends Enumeration {
   val LOWER_BOUND: Delimiters.Value = Value(":>")
   val UPPER_BOUND: Delimiters.Value = Value("<:")
   val BIRD: Delimiters.Value = Value("|>")
+  val BIRD_PLACEMENT: Delimiters.Value = Value("$")
   val LAMBDA: Delimiters.Value = Value("|")
 
   def getValue(str: String): Option[Delimiters.Value] = {

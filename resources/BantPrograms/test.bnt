@@ -1,31 +1,7 @@
-alias C = int;
-alias F = int;
-
-type Temp {
-    C | F
-};
-
-typeclass Eq[T] {
-    equal = (T, T) -> bool
-    notEqual = (T, T) -> bool
-};
-
-typeclass sealed Ord[T] => Eq {
-    greater = (T, T) -> bool
-};
-
-instance Temp : Eq, Ord {
-    fn equal(t1: C, t2: C) -> bool = t1 == t2;
-    fn notEqual(t1: C, t2: C) -> bool = t1 != t2;
-    fn greater(t1: C, t2: C) -> bool = t1 > t2;
-};
-
-instance Person : Eq {
-    fn equal(p1: int, p2: int) -> bool = p1 == p2;
-    fn notEqual(p1: int, p2: int) -> bool = p1 != p2;
-};
-
-record sealed Person derives Eq {
-    age: int,
-    name: String
-};
+print(
+    map(
+        filter(List { 1, 2, 3 },
+               |x: int| -> bool = x % 2 == 0;),
+        |x: int| -> int = x * 2;)
+    )
+)

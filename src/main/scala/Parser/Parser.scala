@@ -340,7 +340,7 @@ object Parser {
         ConstructorCase(ident, values)
       case _ =>
         val token = curr
-        parsePrim match {
+        parseLit match {
           case NoOp(_) =>
             reportBadMatch(token, "<primitive>")
             advance()
@@ -364,6 +364,8 @@ object Parser {
 
     if (count > 1)
       warn(token, "Wildcard occurs more than once")
+    else if (count == 0)
+      warn(token, "Match is not exhaustive")
 
     token = cases(0).token
     if (cases.indexWhere((c: Case) => {
@@ -455,7 +457,7 @@ object Parser {
     }
 
     matchStatementEndRequired()
-    Adt(token, ident, generics, constructors, derivedFrom, parseExp)
+    Adt(token, ident, generics, derivedFrom, constructors, parseExp)
   }
 
   def parseRecord: Exp = {
@@ -488,7 +490,7 @@ object Parser {
     }
 
     matchStatementEndRequired()
-    Record(token, isSealed, ident, generics, superType, members, derivedFrom, parseExp)
+    Record(token, isSealed, ident, generics, superType, derivedFrom, members, parseExp)
   }
 
   def parseAlias: Alias = {
@@ -614,11 +616,12 @@ object Parser {
     LOG(DEBUG, s"parseUtight(Int): $curr")
     var leftSide = parseUtight
 
-    if (isBinaryOperator(min)) {
+    while (isBinaryOperator(min)) {
       val op = curr.asInstanceOf[Delimiter].delim
       val tempMin = getPrecedence(op) + 1
       advance()
-      leftSide = Prim(leftSide.token, op, leftSide, parseUtight(tempMin))
+      val rightSide = parseUtight(tempMin)
+      leftSide = Prim(leftSide.token, op, leftSide, rightSide)
     }
     leftSide
   }
@@ -649,8 +652,57 @@ object Parser {
         val tmpExp = parseSimpleExp
         matchRequired(RIGHT_BRACE)
         tmpExp
-      case _ => parseAtom
+      case _ => parseApplication
     }
+  }
+
+  def parseArguments: ArrayBuffer[Exp] = {
+    LOG(DEBUG, s"parseArguments: $curr")
+    val arguments = ArrayBuffer[Exp]()
+    while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN)) {
+      arguments += parseSimpleExp
+    }
+    arguments
+  }
+
+  def parseApplication: Exp = {
+    LOG(DEBUG, s"parseApplication: $curr")
+    val token = curr
+    val ident = parseAtom
+
+    if (ident.isInstanceOf[Lit] || ident.isInstanceOf[NoOp])
+      return ident
+
+    val genericParameters = ArrayBuffer[Type]()
+    if (matchOptional(LEFT_BRACKET)) {
+      while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET)) {
+        genericParameters += parseType
+      }
+    }
+
+    var arguments = ArrayBuffer[Exp]()
+    if (matchOptional(LEFT_PAREN)) {
+      arguments = parseArguments
+      var app = App(token, ident, genericParameters, arguments)
+
+      while (matchOptional(LEFT_PAREN)) {
+        val outerArguments = parseArguments
+        app = App(token, app, genericParameters, outerArguments)
+      }
+      app
+    }
+    else
+      ident
+  }
+
+  def parseTupleAccessIndex: IntVal = {
+    LOG(DEBUG, s"parseTupleAccessIndex: $curr")
+    val prim = parseLit
+    if (!prim.isInstanceOf[Lit] && !prim.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
+      reportBadMatch(curr, "<IntVal>", "Tuple access requires integer literal")
+      return IntVal(-1)
+    }
+    prim.asInstanceOf[Lit].value.asInstanceOf[IntVal]
   }
 
   def parseAtom: Exp = {
@@ -662,18 +714,23 @@ object Parser {
         matchRequired(RIGHT_PAREN)
         tmpExp
       case Ident(_, _) =>
-        Ref(curr, matchIdent)
-      case _ => parsePrim
+        val ref = Ref(curr, matchIdent)
+        if (matchOptional(ACCESS)) {
+          val accessIndex = parseTupleAccessIndex
+          var tupleAccess = TupleAccess(curr, ref, accessIndex)
+
+          while (matchOptional(ACCESS)) {
+            tupleAccess = TupleAccess(curr, tupleAccess, parseTupleAccessIndex)
+          }
+          return tupleAccess
+        }
+        ref
+      case _ => parseLit
     }
   }
 
-  def parseApplication: Exp = {
-    LOG(DEBUG, s"parseApplication: $curr")
-    none
-  }
-
-  def parsePrim: Exp = {
-    LOG(DEBUG, s"parsePrim: $curr")
+  def parseLit: Exp = {
+    LOG(DEBUG, s"parseLit: $curr")
     curr match {
       case Keyword(TRUE, _, _) =>
         advance()
@@ -699,6 +756,7 @@ object Parser {
       case EOF(_, _) => none
       case _ =>
         reportUnexpected(curr)
+        advance()
         none
     }
   }
@@ -773,6 +831,7 @@ object Parser {
         AdtType(ident, generics)
       case _ =>
         reportBadType(curr)
+        advance()
         UnknownType()
     }
 
