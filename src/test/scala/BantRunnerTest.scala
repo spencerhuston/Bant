@@ -89,6 +89,7 @@ class BantRunnerTest extends AnyFlatSpec {
   }
 
   "Logger.LOG" should "print logs" in {
+    Logger.Logger.setLevel("DEBUG")
     Logger.Logger.LOG(Logger.Level.INFO, "test")
     Logger.Logger.LOG(Logger.Level.WARN, "test")
     Logger.Logger.LOG(Logger.Level.ERROR, "test")
