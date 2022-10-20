@@ -1,9 +1,10 @@
+import Lexer.SyntaxDefinitions.Delimiters
 import org.scalatest.flatspec.AnyFlatSpec
 import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
-import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Terminator, Token}
+import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Token}
 import Logger.Logger.lineList
-import Parser.{AnyCase, ArrayDef, BoolVal, Branch, Case, CharVal, ConstructorCase, DictDef, FunDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prim, Prog, Ref, SetDef, StringVal, TupleDef, TypeCase, ValueCase}
+import Parser.{Alias, AnyCase, ArrayDef, BoolVal, Branch, Case, ConstructorCase, DictDef, FuncApp, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prim, Prog, Ref, SetDef, StringVal, TupleAccess, TupleDef, TypeCase, ValueCase}
 import Parser.Parser._
 import TypeChecker._
 
@@ -14,6 +15,7 @@ class ParserTest extends AnyFlatSpec {
     index = 0
     tokenStream = ArrayBuffer[Token]()
     numErrors = 0
+    warnings = 0
     dummyCount = 0
     anonCount = 0
     lineList = Array[String]()
@@ -191,7 +193,8 @@ class ParserTest extends AnyFlatSpec {
     clear()
     tokenStream = Lexer.Lexer.scan("lazy")
     index = 3
-    assert(parse(tokenStream).isInstanceOf[NoOp])
+    val exp = parse(tokenStream)
+    assert(exp.isInstanceOf[NoOp])
   }
 
   "Parser.parseExp" must "return simplest let when given tokens" in {
@@ -477,52 +480,89 @@ class ParserTest extends AnyFlatSpec {
     assert(warnings == 2)
   }
 
-  it should "warn against match without wildcard" in {
-    clear()
-    // TODO
-    assert(false)
-  }
-
   it should "warn against match where wildcard is not the last pattern" in {
     clear()
-    // TODO
-    assert(false)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/match_no_wildcard_test.bnt")
+    assert(exp.isInstanceOf[Match])
+    val matchExp = exp.asInstanceOf[Match]
+    assert(matchExp.cases.length == 2)
+    assert(matchExp.cases(0).casePattern.isInstanceOf[ValueCase])
+    assert(matchExp.cases(0).casePattern.asInstanceOf[ValueCase].value.isInstanceOf[AnyCase])
+    assert(warnings == 1)
   }
 
-  "Parser.parseAlias" should "parse typeclass" in {
+  "Parser.parseAlias" should "parse an alias" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("alias IntType = int")
+    val alias = parseAlias
+    assert(alias.isInstanceOf[Alias])
+    assert(alias.alias == "IntType")
+    assert(alias.actualType.isInstanceOf[IntType])
   }
 
-  "Parser.parseAdt" should "parse typeclass" in {
+  "Parser.parseAdt" should "parse a data type" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("type Option[T] derives Test { Some[T] | None }")
+    val adt = parseAdt
+    assert(adt.ident == "Option")
+    assert(adt.generics.length == 1)
+    assert(adt.generics.head.ident == "T")
+    assert(adt.derivedFrom.ident == "Test")
+    assert(adt.constructors.length == 2)
+    assert(adt.constructors(0).members.length == 1)
+    assert(adt.constructors(0).members(0).isInstanceOf[AdtType])
+    assert(adt.constructors(0).members(0).asInstanceOf[AdtType].ident == "Some")
+    assert(adt.constructors(1).members.length == 1)
+    assert(adt.constructors(1).members(0).isInstanceOf[AdtType])
+    assert(adt.constructors(1).members(0).asInstanceOf[AdtType].ident == "None")
   }
 
-  "Parser.parseRecord" should "parse typeclass" in {
+  "Parser.parseRecord" should "parse a record" in {
     clear()
-    // TODO
-    assert(false)
-  }
-
-  "Parser.parseSuperType" should "parse typeclass with a super typeclass" in {
-    clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("record sealed Person[T] => Animal derives Test { age: int, name: string }")
+    val record = parseRecord
+    assert(record.isSealed)
+    assert(record.ident == "Person")
+    assert(record.generics.length == 1)
+    assert(record.generics.head.ident == "T")
+    assert(record.superType.ident == "Animal")
+    assert(record.derivedFrom.ident == "Test")
+    assert(record.members.length == 2)
+    assert(record.members(0).ident == "age")
+    assert(record.members(0).memberType.isInstanceOf[IntType])
+    assert(record.members(1).ident == "name")
+    assert(record.members(1).memberType.isInstanceOf[StringType])
   }
 
   "Parser.parseTypeclass" should "parse typeclass" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("typeclass sealed Ord[T] => Eq { greater = (T, T) -> bool }")
+    val typeclass = parseTypeclass
+    assert(typeclass.isSealed)
+    assert(typeclass.ident == "Ord")
+    assert(typeclass.genericTypes.length == 1)
+    assert(typeclass.genericTypes.head.ident == "T")
+    assert(typeclass.superclass.ident == "Eq")
+    assert(typeclass.signatures.length == 1)
+    assert(typeclass.signatures.head.name.ident == "greater")
+    assert(typeclass.signatures.head.funcType.isInstanceOf[FuncType])
+    assert(typeclass.signatures.head.funcType.asInstanceOf[FuncType].argTypes.length == 2)
+    assert(typeclass.signatures.head.funcType.asInstanceOf[FuncType].returnType.isInstanceOf[BoolType])
   }
 
-  "Parser.parseInstance" should "parse typeclass" in {
+  "Parser.parseInstance" should "parse typeclass instance" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("instance Person : Eq, Ord { fn greater[T](a: T, b: T) -> a > b; }")
+    val instance = parseInstance
+    assert(instance.adt.ident == "Person")
+    assert(instance.typeclassIdents.length == 2)
+    assert(instance.typeclassIdents.head.ident == "Eq")
+    assert(instance.typeclassIdents(1).ident == "Ord")
+    assert(instance.funcs.length == 1)
+    assert(instance.funcs.head.ident == "greater")
+    assert(instance.funcs.head.params.length == 2)
+    assert(instance.funcs.head.generics.length == 1)
+    assert(instance.funcs.head.generics.head.ident == "T")
   }
 
   "Parser.parseProg" should "parse 1 function definition" in {
@@ -540,8 +580,14 @@ class ParserTest extends AnyFlatSpec {
 
   it should "parse function with parametric type bounds" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("fn f[T :> R <: S]() -> bool = false;")
+    val prog = parseProg
+    assert(prog.funcs.length == 1)
+    val func = prog.funcs.head
+    assert(func.generics.length == 1)
+    assert(func.generics.head.ident == "T")
+    assert(func.generics.head.lowerBound == "R")
+    assert(func.generics.head.upperBound == "S")
   }
 
   it should "parse 1 function with a default parameter" in {
@@ -640,26 +686,35 @@ class ParserTest extends AnyFlatSpec {
 
   "Parser.parseLambda" should "parse lambda without parameters" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("|| -> bool = false")
+    val lambda = parseLambda
+    assert(lambda.funcs.length == 1)
+    assert(lambda.funcs.head.ident == "anon$0_def")
+    assert(lambda.funcs.head.generics.isEmpty)
+    assert(lambda.funcs.head.params.isEmpty)
+    assert(lambda.funcs.head.returnType.isInstanceOf[BoolType])
+    assert(lambda.afterProg.isInstanceOf[Ref])
+    assert(lambda.afterProg.asInstanceOf[Ref].ident == "anon$0_def")
   }
 
   it should "parse closure made of lambdas" in {
     clear()
     val exp = getExp("src/test/testPrograms/ParserPrograms/lambda_closure_test.bnt")
-    assert(exp.isInstanceOf[Let])
-    val let = exp.asInstanceOf[Let]
-    assert(let.expValue.isInstanceOf[Let])
-    val lambda1 = let.expValue.asInstanceOf[Let]
-    assert(lambda1.ident == "anon$0")
-    assert(lambda1.expValue.isInstanceOf[FunDef])
-    assert(lambda1.expValue.asInstanceOf[FunDef].ident == "anon$0_def")
-    assert(lambda1.expValue.asInstanceOf[FunDef].body.isInstanceOf[Let])
-    val lambda2 = lambda1.expValue.asInstanceOf[FunDef].body.asInstanceOf[Let]
-    assert(lambda2.ident == "anon$1")
-    assert(lambda2.expValue.isInstanceOf[FunDef])
-    assert(lambda2.expValue.asInstanceOf[FunDef].ident == "anon$1_def")
-    assert(lambda2.expValue.asInstanceOf[FunDef].body.isInstanceOf[Prim])
+    assert(exp.isInstanceOf[Prog])
+    val prog = exp.asInstanceOf[Prog]
+    assert(prog.funcs.length == 1)
+    val lambda1 = prog.funcs.head
+    assert(lambda1.ident == "anon$0_def")
+    assert(lambda1.params.length == 1)
+    assert(lambda1.params.head.ident == "x")
+    assert(lambda1.body.isInstanceOf[Prog])
+    assert(lambda1.body.asInstanceOf[Prog].funcs.length == 1)
+    val lambda2 = lambda1.body.asInstanceOf[Prog].funcs.head
+    assert(lambda2.params.length == 1)
+    assert(lambda1.body.asInstanceOf[Prog].afterProg.isInstanceOf[Ref])
+    assert(lambda1.body.asInstanceOf[Prog].afterProg.asInstanceOf[Ref].ident == "anon$1_def")
+    assert(prog.afterProg.isInstanceOf[Ref])
+    assert(prog.afterProg.asInstanceOf[Ref].ident == "anon$0_def")
   }
 
   it should "parse multiple function definitions with optional semicolons" in {
@@ -674,32 +729,89 @@ class ParserTest extends AnyFlatSpec {
 
   "Parser.parseUtight" should "parse unary NOT" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("!true")
+    val exp = parseUtight(0)
+    assert(exp.isInstanceOf[Prim])
+    val prim = exp.asInstanceOf[Prim]
+    assert(prim.left.isInstanceOf[Lit])
+    assert(prim.left.asInstanceOf[Lit].value.isInstanceOf[BoolVal])
+    // BoolVal.value is false
+    assert(!prim.left.asInstanceOf[Lit].value.asInstanceOf[BoolVal].value)
+    assert(prim.right.isInstanceOf[Lit])
+    assert(prim.right.asInstanceOf[Lit].value.isInstanceOf[BoolVal])
+    // BoolVal.value is true
+    assert(prim.right.asInstanceOf[Lit].value.asInstanceOf[BoolVal].value)
+    assert(prim.op == Delimiters.AND)
   }
 
   it should "parse unary MINUS" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("-1")
+    val exp = parseUtight(0)
+    assert(exp.isInstanceOf[Prim])
+    val prim = exp.asInstanceOf[Prim]
+    assert(prim.left.isInstanceOf[Lit])
+    assert(prim.left.asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(prim.left.asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 0)
+    assert(prim.right.isInstanceOf[Lit])
+    assert(prim.right.asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(prim.right.asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 1)
+    assert(prim.op == Delimiters.MINUS)
   }
 
   "Parser.parseApplication" should "parse function application" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("f[T](1)(2, 3)")
+    val exp = parseApplication
+    assert(exp.isInstanceOf[FuncApp])
+    val outerApp = exp.asInstanceOf[FuncApp]
+    assert(outerApp.ident.isInstanceOf[FuncApp])
+    assert(outerApp.genericParameters.length == 1)
+    assert(outerApp.genericParameters.head.isInstanceOf[AdtType])
+    assert(outerApp.arguments.length == 2)
+    assert(outerApp.arguments(0).isInstanceOf[Lit])
+    assert(outerApp.arguments(0).asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(outerApp.arguments(0).asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 2)
+    assert(outerApp.arguments(1).isInstanceOf[Lit])
+    assert(outerApp.arguments(1).asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(outerApp.arguments(1).asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 3)
+    val innerApp = outerApp.ident.asInstanceOf[FuncApp]
+    assert(innerApp.ident.isInstanceOf[Ref])
+    assert(innerApp.ident.asInstanceOf[Ref].ident == "f")
+    assert(innerApp.genericParameters.length == 1)
+    assert(innerApp.genericParameters.head.isInstanceOf[AdtType])
+    assert(innerApp.arguments(0).isInstanceOf[Lit])
+    assert(innerApp.arguments(0).asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(innerApp.arguments(0).asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 1)
   }
 
   "Parser.parseAtom" should "parse parentheses enclosed expression" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("(1 + 2)")
+    val exp = parseAtom
+    assert(exp.isInstanceOf[Prim])
+    val prim = exp.asInstanceOf[Prim]
+    assert(prim.left.isInstanceOf[Lit])
+    assert(prim.left.asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(prim.left.asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 1)
+    assert(prim.right.isInstanceOf[Lit])
+    assert(prim.right.asInstanceOf[Lit].value.isInstanceOf[IntVal])
+    assert(prim.right.asInstanceOf[Lit].value.asInstanceOf[IntVal].value == 2)
+    assert(prim.op == Delimiters.PLUS)
   }
 
   it should "parse tuple access" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("t.0.1")
+    val exp = parseAtom
+    assert(exp.isInstanceOf[TupleAccess])
+    val ta = exp.asInstanceOf[TupleAccess]
+    assert(ta.ref.isInstanceOf[TupleAccess])
+    assert(ta.accessIndex.value == 1)
+    val taNested = ta.ref.asInstanceOf[TupleAccess]
+    assert(taNested.ref.isInstanceOf[Ref])
+    assert(taNested.ref.asInstanceOf[Ref].ident == "t")
+    assert(taNested.accessIndex.value == 0)
   }
 
   "Parser.parseLit" should "parse null literal" in {

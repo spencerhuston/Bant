@@ -426,7 +426,12 @@ object Parser {
     Adt(token, ident, generics, derivedFrom, constructors, parseExp)
   }
 
-  def parseRecord: Exp = {
+  def parseSuperType: Ref = {
+    if (matchOptional(CASE_EXP)) Ref(curr, matchIdent)
+    else Ref(curr, "$None$")
+  }
+
+  def parseRecord: Record = {
     LOG(DEBUG, s"parseRecord: $curr")
     val token = curr
     matchRequired(RECORD)
@@ -457,11 +462,6 @@ object Parser {
 
     matchStatementEndRequired()
     Record(token, isSealed, ident, generics, superType, derivedFrom, members, parseExp)
-  }
-
-  def parseSuperType: Ref = {
-    if (matchOptional(CASE_EXP)) Ref(curr, matchIdent)
-    else Ref(curr, "$None$")
   }
 
   def parseTypeclass: Typeclass = {
@@ -688,11 +688,11 @@ object Parser {
     var arguments = ArrayBuffer[Exp]()
     if (matchOptional(LEFT_PAREN)) {
       arguments = parseArguments
-      var app = App(token, ident, genericParameters, arguments)
+      var app = FuncApp(token, ident, genericParameters, arguments)
 
       while (matchOptional(LEFT_PAREN)) {
         val outerArguments = parseArguments
-        app = App(token, app, genericParameters, outerArguments)
+        app = FuncApp(token, app, genericParameters, outerArguments)
       }
       app
     }
@@ -702,12 +702,13 @@ object Parser {
 
   def parseTupleAccessIndex: IntVal = {
     LOG(DEBUG, s"parseTupleAccessIndex: $curr")
-    val prim = parseLit
-    if (!prim.isInstanceOf[Lit] && !prim.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
+    val accessIndex = parseLit
+    if (!accessIndex.isInstanceOf[Lit] && !accessIndex.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
       reportBadMatch(curr, "<IntVal>", "Tuple access requires integer literal")
-      return IntVal(-1)
+      IntVal(-1)
     }
-    prim.asInstanceOf[Lit].value.asInstanceOf[IntVal]
+    else
+      accessIndex.asInstanceOf[Lit].value.asInstanceOf[IntVal]
   }
 
   def parseAtom: Exp = {
@@ -727,9 +728,10 @@ object Parser {
           while (matchOptional(ACCESS)) {
             tupleAccess = TupleAccess(curr, tupleAccess, parseTupleAccessIndex)
           }
-          return tupleAccess
+          tupleAccess
         }
-        ref
+        else
+          ref
       case _ => parseLit
     }
   }

@@ -16,24 +16,6 @@ abstract class Exp {
   }
 }
 
-// General
-case class Let(token: Token,
-               isLazy: Boolean,
-               ident: String,
-               letType: Type,
-               expValue: Exp,
-               afterLet: Exp) extends Exp
-case class Prim(token: Token,
-                op: Delimiters.Value,
-                left: Exp,
-                right: Exp) extends Exp
-case class Ref(token: Token,
-               ident: String) extends Exp
-case class Branch(token: Token,
-                  condition: Exp,
-                  ifBranch: Exp,
-                  elseBranch: Exp) extends Exp
-
 // Primitives
 case class Lit(token: Token,
                value: Val) extends Exp
@@ -45,32 +27,25 @@ case class CharVal(value: String) extends Val
 case class StringVal(value: String) extends Val
 case class NullVal() extends Val
 
-// Functions
-case class Prog(token: Token,
-                funcs: ArrayBuffer[FunDef],
-                afterProg: Exp) extends Exp
-case class Generic(ident: String, lowerBound: String, upperBound: String)
-case class Parameter(token: Token,
-                     ident: String,
-                     paramType: Type,
-                     default: Exp) extends Exp
-case class FunDef(token: Token,
-                  ident: String,
-                  generics: ArrayBuffer[Generic],
-                  params: ArrayBuffer[Parameter],
-                  returnType: Type,
-                  body: Exp) extends Exp
+// Pattern Matching Values
+sealed trait CasePattern { }
+case class TypeCase(ident: String,
+                    caseType: Type) extends CasePattern
+case class ValueCase(value: ValueCasePattern) extends CasePattern
 
-// Function Application/Data & Record Construction/Collection Access/
-case class App(token: Token,
-               ident: Exp,
-               genericParameters: ArrayBuffer[Type],
-               arguments: ArrayBuffer[Exp]) extends Exp
-case class Bird(token: Token,
-                apps: ArrayBuffer[App]) extends Exp
-case class TupleAccess(token: Token,
-                       ref: Exp,
-                       accessIndex: IntVal) extends Exp
+sealed trait ValueCasePattern { }
+case class ConstructorCase(ident: String,
+                           values: ArrayBuffer[ValueCasePattern]) extends ValueCasePattern
+case class LitCase(value: Val) extends ValueCasePattern
+case class AnyCase() extends ValueCasePattern
+
+// Pattern Matching
+case class Match(token: Token,
+                 value: Exp,
+                 cases: ArrayBuffer[Case]) extends Exp
+case class Case(token: Token,
+                casePattern: CasePattern,
+                caseExp: Exp) extends Exp
 
 // Data & Record Types and Typeclasses
 case class Alias(token: Token,
@@ -99,13 +74,58 @@ case class Typeclass(token: Token,
                      ident: String,
                      genericTypes: ArrayBuffer[Generic],
                      superclass: Ref,
-                     signature: ArrayBuffer[Signature],
+                     signatures: ArrayBuffer[Signature],
                      afterTypeclass: Exp) extends Exp
 case class Instance(token: Token,
                     adt: Ref,
                     typeclassIdents: ArrayBuffer[Ref],
                     funcs: ArrayBuffer[FunDef],
                     afterInstance: Exp) extends Exp
+
+// Functions
+case class Prog(token: Token,
+                funcs: ArrayBuffer[FunDef],
+                afterProg: Exp) extends Exp
+case class Generic(ident: String, lowerBound: String, upperBound: String)
+case class Parameter(token: Token,
+                     ident: String,
+                     paramType: Type,
+                     default: Exp) extends Exp
+case class FunDef(token: Token,
+                  ident: String,
+                  generics: ArrayBuffer[Generic],
+                  params: ArrayBuffer[Parameter],
+                  returnType: Type,
+                  body: Exp) extends Exp
+
+// Function Application/Data & Record Construction/Collection Access/
+case class FuncApp(token: Token,
+                   ident: Exp,
+                   genericParameters: ArrayBuffer[Type],
+                   arguments: ArrayBuffer[Exp]) extends Exp
+case class Bird(token: Token,
+                apps: ArrayBuffer[FuncApp]) extends Exp
+case class TupleAccess(token: Token,
+                       ref: Exp,
+                       accessIndex: IntVal) extends Exp
+
+// General
+case class Let(token: Token,
+               isLazy: Boolean,
+               ident: String,
+               letType: Type,
+               expValue: Exp,
+               afterLet: Exp) extends Exp
+case class Prim(token: Token,
+                op: Delimiters.Value,
+                left: Exp,
+                right: Exp) extends Exp
+case class Ref(token: Token,
+               ident: String) extends Exp
+case class Branch(token: Token,
+                  condition: Exp,
+                  ifBranch: Exp,
+                  elseBranch: Exp) extends Exp
 
 // Collections
 case class ListDef(token: Token,
@@ -119,26 +139,6 @@ case class TupleDef(token: Token,
 case class Map(key: Exp, value: Exp)
 case class DictDef(token: Token,
                    mapping: ArrayBuffer[Map]) extends Exp
-
-// Pattern Matching Values
-sealed trait CasePattern { }
-case class TypeCase(ident: String,
-                    caseType: Type) extends CasePattern
-case class ValueCase(value: ValueCasePattern) extends CasePattern
-
-sealed trait ValueCasePattern { }
-case class ConstructorCase(ident: String,
-                           values: ArrayBuffer[ValueCasePattern]) extends ValueCasePattern
-case class LitCase(value: Val) extends ValueCasePattern
-case class AnyCase() extends ValueCasePattern
-
-// Pattern Matching
-case class Match(token: Token,
-                 value: Exp,
-                 cases: ArrayBuffer[Case]) extends Exp
-case class Case(token: Token,
-                casePattern: CasePattern,
-                caseExp: Exp) extends Exp
 
 // None - Error occurred or EOF
 case class NoOp(token: Token) extends Exp
