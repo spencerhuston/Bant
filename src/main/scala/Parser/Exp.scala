@@ -78,7 +78,7 @@ case class Typeclass(token: Token,
                      afterTypeclass: Exp) extends Exp
 case class Instance(token: Token,
                     adt: Ref,
-                    typeclassIdents: ArrayBuffer[Ref],
+                    typeclassIdent: Ref,
                     funcs: ArrayBuffer[FunDef],
                     afterInstance: Exp) extends Exp
 

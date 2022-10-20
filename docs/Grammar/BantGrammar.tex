@@ -154,13 +154,15 @@
 
 <members> ::= <ident>`:'<type>[`,'<ident>`:'<type>]*
 
-<\textbf{record}> ::= `record'[`sealed']<genericIdent>[`=>'<genericIdent>][<derive>]`\{'[<members>]`\}'<stmntEnd>
+<extend> ::= `extends'<genericIdent>
+
+<\textbf{record}> ::= [`sealed']`record'<genericIdent>[<extend>][<derive>]`\{'[<members>]`\}'<stmntEnd>
 
 <signatures> ::= <ident>`='<type>[`,'<ident>`='<type>]*
  
-<\textbf{typeclass}> ::= `typeclass'[`sealed']<genericIdent>[`=>' <ident>]`\{'[<signatures>]`\}'<stmntEnd>
+<\textbf{typeclass}> ::= [`sealed']`typeclass'<genericIdent>[`extends'<ident>]`\{'[<signatures>]`\}'<stmntEnd>
 
-<\textbf{instance}> ::= `instance' <ident>`:'<ident>`\{'[<funDef>]*`\}'<stmntEnd>
+<\textbf{instance}> ::= `instance' <ident>`of'<ident>`\{'[<funDef>]*`\}'<stmntEnd>
 
 \end{grammar}
 

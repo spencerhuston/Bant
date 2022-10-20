@@ -218,8 +218,9 @@ object Parser {
       case Keyword(MATCH, _, _) => parseMatch
       case Keyword(ALIAS, _, _) => parseAlias
       case Keyword(TYPE, _, _) => parseAdt
-      case Keyword(RECORD, _, _) => parseRecord
-      case Keyword(TYPECLASS, _, _) => parseTypeclass
+      case Keyword(RECORD, _, _) => parseRecord(false)
+      case Keyword(TYPECLASS, _, _) => parseTypeclass(false)
+      case Keyword(SEALED_TYPE, _, _) => parseSealed
       case Keyword(INSTANCE, _, _) => parseInstance
       case Keyword(FN, _, _) => parseProg
       case Delimiter(Delimiters.LAMBDA, _, _) => parseLambda
@@ -438,19 +439,14 @@ object Parser {
   }
 
   def parseSuperType: Ref = {
-    if (matchOptional(CASE_EXP)) Ref(curr, matchIdent)
+    if (matchOptional(EXTENDS)) Ref(curr, matchIdent)
     else Ref(curr, "$None$")
   }
 
-  def parseRecord: Record = {
+  def parseRecord(isSealed: Boolean): Record = {
     LOG(DEBUG, s"parseRecord: $curr")
     val token = curr
     matchRequired(RECORD)
-
-    var isSealed = false
-    if (matchOptional(SEALED)) {
-      isSealed = true
-    }
 
     val ident = matchIdent
     requireUppercaseStart(ident, "<record>")
@@ -477,15 +473,10 @@ object Parser {
     Record(token, isSealed, ident, generics, superType, derivedFrom, members, parseExp)
   }
 
-  def parseTypeclass: Typeclass = {
+  def parseTypeclass(isSealed: Boolean): Typeclass = {
     LOG(DEBUG, s"parseTypeclass: $curr")
     val token = curr
     matchRequired(TYPECLASS)
-
-    var isSealed = false
-    if (matchOptional(SEALED)) {
-      isSealed = true
-    }
 
     val typeclassIdent = matchIdent
     requireUppercaseStart(typeclassIdent, "<typeclass>")
@@ -506,18 +497,26 @@ object Parser {
     Typeclass(token, isSealed, typeclassIdent, genericTypes, superclass, signatures, parseExp)
   }
 
+  def parseSealed: Exp = {
+    LOG(DEBUG, s"parseSealed: $curr")
+    matchRequired(SEALED_TYPE)
+    curr match {
+      case Keyword(RECORD, _, _) => parseRecord(true)
+      case Keyword(TYPECLASS, _, _) => parseTypeclass(true)
+      case _ =>
+        reportBadMatch(curr, "<record> or <typeclass>")
+        advance()
+        none
+    }
+  }
+
   def parseInstance: Instance = {
     LOG(DEBUG, s"parseInstance: $curr")
     val token = curr
     matchRequired(INSTANCE)
     val adtIdent = Ref(curr, matchIdent)
-    matchRequired(COLON)
-
-    val typeclassIdents = ArrayBuffer[Ref]()
-    typeclassIdents += Ref(curr, matchIdent)
-    while (matchOptional(COMMA)) {
-      typeclassIdents += Ref(curr, matchIdent)
-    }
+    matchRequired(OF)
+    val typeclassIdent = Ref(curr, matchIdent)
 
     matchRequired(LEFT_BRACE)
     val funcs = ArrayBuffer[FunDef]()
@@ -526,7 +525,7 @@ object Parser {
     }
     matchRequired(RIGHT_BRACE)
     matchStatementEndRequired()
-    Instance(token, adtIdent, typeclassIdents, funcs, parseExp)
+    Instance(token, adtIdent, typeclassIdent, funcs, parseExp)
   }
 
   def parseProg: Prog = {
