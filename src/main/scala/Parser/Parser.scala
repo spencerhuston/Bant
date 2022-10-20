@@ -148,8 +148,12 @@ object Parser {
     try {
       parseExp
     } catch {
-      case _: IndexOutOfBoundsException =>
-        ERROR(s"Error: EOF encountered during parsing")
+      case i: IndexOutOfBoundsException =>
+        ERROR(s"Fatal Internal Error - IndexOutOfBoundsException: ${i.getMessage}")
+        index = 0
+        none
+      case n: NoSuchElementException =>
+        ERROR(s"Fatal Internal Error - NoSuchElementException: ${n.getMessage}")
         index = 0
         none
     }
@@ -399,11 +403,18 @@ object Parser {
     Alias(token, alias, actualType, parseExp)
   }
 
+  def requireUppercaseStart(ident: String, typeString: String): Unit = {
+    if (!ident.head.isLetter || (ident.head.isLetter && ident.head.isLower))
+      reportLowercaseIdent(tokenStream(index - 1), typeString)
+  }
+
   def parseAdt: Adt = {
     LOG(DEBUG, s"parseAdt: $curr")
     val token = curr
     matchRequired(TYPE)
     val ident = matchIdent
+    requireUppercaseStart(ident, "<type>")
+
     val generics = parseGenerics
 
     var derivedFrom = Ref(curr, "$None$")
@@ -442,6 +453,8 @@ object Parser {
     }
 
     val ident = matchIdent
+    requireUppercaseStart(ident, "<record>")
+
     val generics = parseGenerics
     val superType = parseSuperType
 
@@ -475,6 +488,8 @@ object Parser {
     }
 
     val typeclassIdent = matchIdent
+    requireUppercaseStart(typeclassIdent, "<typeclass>")
+
     val genericTypes = parseGenerics
     val superclass = parseSuperType
 
@@ -848,6 +863,11 @@ object Parser {
       FuncType(ArrayBuffer(expType), returnType)
     } else
       expType
+  }
+
+  def reportLowercaseIdent(token: Token, typeString: String): Unit = {
+    ERROR(s"Error: ${typeString} identifier must start with uppercase character")
+    reportLine(token)
   }
 
   def reportBadMatch(token: Token, expected: String, note: String = ""): Unit = {
