@@ -278,6 +278,11 @@ object Lexer {
     }
   }
 
+  def stripOuterNewlines(str: String): String = {
+    val strippedFrontReversed = str.substring(str.indexWhere((c: Char) => c != '\n')).reverse
+    strippedFrontReversed.substring(strippedFrontReversed.indexWhere((c: Char) => c != '\n')).reverse
+  }
+
   @tailrec
   def stripMultiSemicolons(tokenStream: ArrayBuffer[Token], index: Int = 0, semicolonIndex: Int = -1): ArrayBuffer[Token] = {
     tokenStream(index) match {
@@ -302,12 +307,9 @@ object Lexer {
   }
 
   def scan(sourceString: String): ArrayBuffer[Token] = {
-    var tmpSourceString = sourceString.replace("\r", "")
-    if (tmpSourceString.endsWith("\n"))
-      tmpSourceString = tmpSourceString.dropRight(1)
-
-    position.source = tmpSourceString
+    position.source = stripOuterNewlines(sourceString.replace("\r", ""))
     lineList = position.source.split("\n")
+
     scanHelper()
 
     tokenStream = stripMultiSemicolons(tokenStream)

@@ -1,5 +1,4 @@
 import Lexer.SyntaxDefinitions.Delimiters
-import org.scalatest.flatspec.AnyFlatSpec
 import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Token}
@@ -8,6 +7,7 @@ import Parser.{Alias, AnyCase, ArrayDef, BoolVal, Branch, Case, ConstructorCase,
 import Parser.Parser._
 import TypeChecker._
 
+import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.mutable.ArrayBuffer
 
 class ParserTest extends AnyFlatSpec {
