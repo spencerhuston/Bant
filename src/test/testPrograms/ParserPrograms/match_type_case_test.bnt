@@ -1,0 +1,5 @@
+match (x) {
+    case x: string => true
+    case b: bool => false
+    case _ => false
+}

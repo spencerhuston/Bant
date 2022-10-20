@@ -11,12 +11,13 @@ import TypeChecker._
 import scala.collection.mutable.ArrayBuffer
 
 object Parser {
-  var index = 0
+  var index: Int = 0
   var tokenStream: ArrayBuffer[Token] = ArrayBuffer[Token]()
-  var errorOccurred = false
+  var numErrors: Int = 0
+  var warnings: Int = 0
 
-  var dummyCount = 0
-  var anonCount = 0
+  var dummyCount: Int = 0
+  var anonCount: Int = 0
 
   def curr: Token = tokenStream(index)
   def advance(): Unit = index += 1
@@ -371,11 +372,6 @@ object Parser {
       }
     })
 
-    if (count > 1)
-      warn(token, "Wildcard occurs more than once")
-    else if (count == 0)
-      warn(token, "Match is not exhaustive, missing wildcard case")
-
     token = cases(0).token
     if (cases.indexWhere((c: Case) => {
       c.casePattern match {
@@ -385,6 +381,11 @@ object Parser {
     }) != cases.length - 1) {
       warn(token, "Wildcard is not last case pattern")
     }
+
+    if (count > 1)
+      warn(token, "Wildcard occurs more than once")
+    else if (count == 0)
+      warn(token, "Match is not exhaustive, missing wildcard case")
   }
 
   def parseAlias: Alias = {
@@ -868,7 +869,7 @@ object Parser {
     ERROR(s"Line: ${token.fp.line + 1}, Column: ${token.fp.column + 1}:\n")
     ERROR(s"${lineList(token.fp.line)}")
     ERROR(s"${" " * token.fp.column}^\n")
-    errorOccurred = true
+    numErrors += 1
   }
 
   def warn(token: Token, str: String): Unit = {
@@ -876,5 +877,6 @@ object Parser {
     WARN(s"Line: ${token.fp.line + 1}, Column: ${token.fp.column + 1}:\n")
     WARN(s"${lineList(token.fp.line)}")
     WARN(s"${" " * token.fp.column}^\n")
+    warnings += 1
   }
 }

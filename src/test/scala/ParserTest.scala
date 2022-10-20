@@ -3,7 +3,7 @@ import Lexer.SyntaxDefinitions.Delimiters._
 import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Terminator, Token}
 import Logger.Logger.lineList
-import Parser.{AnyCase, ArrayDef, BoolVal, Branch, Case, CharVal, DictDef, FunDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prim, Prog, Ref, SetDef, StringVal, TupleDef, ValueCase}
+import Parser.{AnyCase, ArrayDef, BoolVal, Branch, Case, CharVal, ConstructorCase, DictDef, FunDef, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prim, Prog, Ref, SetDef, StringVal, TupleDef, TypeCase, ValueCase}
 import Parser.Parser._
 import TypeChecker._
 
@@ -13,7 +13,7 @@ class ParserTest extends AnyFlatSpec {
   def clear(): Unit = {
     index = 0
     tokenStream = ArrayBuffer[Token]()
-    errorOccurred = false
+    numErrors = 0
     dummyCount = 0
     anonCount = 0
     lineList = Array[String]()
@@ -79,7 +79,7 @@ class ParserTest extends AnyFlatSpec {
     index = 0
     matchStatementEndRequired()
     assert(index == 0 &&
-           Parser.Parser.errorOccurred)
+           Parser.Parser.numErrors > 0)
   }
 
   "Parser.matchRequired" must "return true if match is made and advance" in {
@@ -93,7 +93,7 @@ class ParserTest extends AnyFlatSpec {
     clear()
     tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(!matchRequired(LAZY) && index == 1 && errorOccurred)
+    assert(!matchRequired(LAZY) && index == 1 && numErrors > 0)
   }
 
   "Parser.matchOptional" must "return true if match is made and advance" in {
@@ -107,7 +107,7 @@ class ParserTest extends AnyFlatSpec {
     clear()
     tokenStream = Lexer.Lexer.scan("val")
     index = 0
-    assert(!matchOptional(LAZY) && index == 0 && !errorOccurred)
+    assert(!matchOptional(LAZY) && index == 0 && numErrors == 0)
   }
 
   "Parser.peek" should "return true if next value matches" in {
@@ -408,7 +408,7 @@ class ParserTest extends AnyFlatSpec {
     clear()
     tokenStream = Lexer.Lexer.scan("lazy")
     index = 0
-    assert(parseCollectionValue.isInstanceOf[NoOp] && Parser.Parser.errorOccurred)
+    assert(parseCollectionValue.isInstanceOf[NoOp] && numErrors > 0)
   }
 
   "Parser.parseMatch" should "make a pattern match exp" in {
@@ -432,26 +432,49 @@ class ParserTest extends AnyFlatSpec {
 
   it should "parse match with type case" in {
     clear()
-    // TODO
-    assert(false)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/match_type_case_test.bnt")
+    assert(exp.isInstanceOf[Match])
+    val matchExp = exp.asInstanceOf[Match]
+    assert(matchExp.cases.length == 3)
+    assert(matchExp.cases(0).casePattern.isInstanceOf[TypeCase])
+    assert(matchExp.cases(0).casePattern.asInstanceOf[TypeCase].caseType.isInstanceOf[StringType])
+    assert(matchExp.cases(1).casePattern.isInstanceOf[TypeCase])
+    assert(matchExp.cases(1).casePattern.asInstanceOf[TypeCase].caseType.isInstanceOf[BoolType])
   }
 
-  it should "parse match with reference value case" in {
+  it should "parse match with constructor value case" in {
     clear()
-    // TODO
-    assert(false)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/match_constructor_case_test.bnt")
+    assert(exp.isInstanceOf[Match])
+    val matchExp = exp.asInstanceOf[Match]
+    assert(matchExp.cases.length == 2)
+    assert(matchExp.cases(0).casePattern.isInstanceOf[ValueCase])
+    assert(matchExp.cases(0).casePattern.asInstanceOf[ValueCase].value.isInstanceOf[ConstructorCase])
+    val constructorCase = matchExp.cases(0).casePattern.asInstanceOf[ValueCase].value.asInstanceOf[ConstructorCase]
+    assert(constructorCase.ident == "Person")
+    assert(constructorCase.values.length == 2)
+    assert(constructorCase.values(0).isInstanceOf[ConstructorCase])
+    assert(constructorCase.values(0).asInstanceOf[ConstructorCase].ident == "age")
+    assert(constructorCase.values(0).asInstanceOf[ConstructorCase].values.isEmpty)
+    assert(constructorCase.values(1).isInstanceOf[ConstructorCase])
+    assert(constructorCase.values(1).asInstanceOf[ConstructorCase].ident == "name")
+    assert(constructorCase.values(1).asInstanceOf[ConstructorCase].values.isEmpty)
   }
 
   it should "throw error in bad match literal value case" in {
     clear()
-    // TODO
-    assert(false)
+    tokenStream = Lexer.Lexer.scan("$")
+    val valCase = parseValueCase
+    assert(valCase.isInstanceOf[AnyCase] && numErrors > 0)
   }
 
   "Parser.warnAnyCase" should "warn against multiple wildcard cases" in {
     clear()
-    // TODO
-    assert(false)
+    val exp = getExp("src/test/testPrograms/ParserPrograms/match_multi_wildcard_warning_test.bnt")
+    assert(exp.isInstanceOf[Match])
+    val matchExp = exp.asInstanceOf[Match]
+    assert(matchExp.cases.length == 3)
+    assert(warnings == 2)
   }
 
   it should "warn against match without wildcard" in {
@@ -700,7 +723,7 @@ class ParserTest extends AnyFlatSpec {
     clear()
     tokenStream = Lexer.Lexer.scan("lazy")
     val lit = parseLit
-    assert(Parser.Parser.errorOccurred)
+    assert(Parser.Parser.numErrors > 0)
   }
 
   "Parser.parseType" should "parse char type" in {
@@ -778,6 +801,6 @@ class ParserTest extends AnyFlatSpec {
     tokenStream = Lexer.Lexer.scan("lazy")
     val badType = parseType
     assert(badType.isInstanceOf[UnknownType] &&
-           Parser.Parser.errorOccurred)
+           Parser.Parser.numErrors > 0)
   }
 }

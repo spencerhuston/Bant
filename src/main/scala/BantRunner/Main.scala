@@ -40,6 +40,10 @@ object Main {
       ERROR("Error(s) occurred, stopping run")
     } else {
       var rootExp = parse(tokenStream)
+      if (Parser.Parser.warnings > 0)
+        WARN(s"${Parser.Parser.warnings} warnings occurred")
+      if (Parser.Parser.numErrors > 0)
+        ERROR(s"${Parser.Parser.numErrors} errors occurred")
       LOG_HEADER("Untyped AST", astToString(rootExp))
     }
   }
