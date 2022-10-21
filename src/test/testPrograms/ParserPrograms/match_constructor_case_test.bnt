@@ -1,0 +1,4 @@
+match (x) {
+    case Person(age, name) => true
+    case _ => false
+}

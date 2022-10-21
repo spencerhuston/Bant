@@ -1,7 +1,7 @@
 package Lexer
 
 import Logger.Level
-import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN}
+import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, lineList}
 import Position._
 import SyntaxDefinitions._
 
@@ -32,7 +32,9 @@ object Lexer {
 
   def isComment: Boolean = !inQuotes && curr == '#'
 
-  def isTerminator: Boolean = curr == ';' || curr == '\n'
+  def isNewline: Boolean = curr == '\n'
+
+  def isSemicolon: Boolean = curr == ';'
 
   def isWhitespace: Boolean = curr == ' ' || curr == '\t'
 
@@ -52,11 +54,14 @@ object Lexer {
         case identRegex(_) => true
       }
     } catch {
-      case _ => false
+      case _: Throwable => false
     }
   }
 
   def findClosestKeyword(str: String): Unit = {
+    if (str.length == 1)
+      return
+
     var minCharacterOffCount = 100
     var minCharacterOffCountKeyword = ""
     var minCompareDiff = 100
@@ -127,7 +132,6 @@ object Lexer {
     if (Math.abs(score) < 0.5 ||
       minCharacterOffCount == 1 ||
       minCharacterOffCountReverse == 1) {
-      //println(s"$str: $score, $minCharacterOffCount, $minCharacterOffCountReverse")
       warnIdentForKeyword(s"Warning: $str: Did you mean $closestKeyword?", str)
     }
   }
@@ -173,7 +177,10 @@ object Lexer {
     }
 
     def addDelimToken(str: String): Unit = {
-      Delimiters.getValue(str) match { case Some(delim) => addToken(Delimiter(delim, str)) }
+      Delimiters.getValue(str) match {
+        case Some(delim) => addToken(Delimiter(delim, str))
+        case _ => ()
+      }
     }
 
     if (isDelimiter && !nextIsDelimiter) {
@@ -191,6 +198,9 @@ object Lexer {
         addDelimToken(curr.toString)
         advanceChar()
       }
+    } else {
+      reportInvalidCharacter()
+      advanceChar()
     }
   }
 
@@ -222,6 +232,7 @@ object Lexer {
             position.columnNumber = actualColumnNumber - term.length
             addToken(Keyword(keywordValue, term))
             position.columnNumber = actualColumnNumber
+          case _ => ()
         }
       else if (isIdent(term)) {
         findClosestKeyword(term)
@@ -241,9 +252,11 @@ object Lexer {
         if (isValidCharacter) {
           if (isComment)
             skipLine()
-          else if (isTerminator) {
-            addToken(Terminator(curr.toString.replace("\n", "\\n")))
-            newline(curr == ';')
+          else if (isNewline)
+            newline()
+          else if (isSemicolon) {
+            addToken(Terminator(";"))
+            advanceChar()
           }
           else if (isWhitespace) advanceChar()
           else if (isRawDelimiter) handleDelimiter()
@@ -256,20 +269,50 @@ object Lexer {
         }
         scanHelper()
       }
-      else addToken(EOF())
+      else {
+        addToken(EOF())
+      }
     }
-    else addToken(EOF())
+    else {
+      addToken(EOF())
+    }
+  }
+
+  def stripOuterNewlines(str: String): String = {
+    val strippedFrontReversed = str.substring(str.indexWhere((c: Char) => c != '\n')).reverse
+    strippedFrontReversed.substring(strippedFrontReversed.indexWhere((c: Char) => c != '\n')).reverse
+  }
+
+  @tailrec
+  def stripMultiSemicolons(tokenStream: ArrayBuffer[Token], index: Int = 0, semicolonIndex: Int = -1): ArrayBuffer[Token] = {
+    tokenStream(index) match {
+      case Terminator(_, _) =>
+        if (semicolonIndex == -1)
+          stripMultiSemicolons(tokenStream, index + 1, index)
+        else
+          stripMultiSemicolons(tokenStream, index + 1, semicolonIndex)
+      case EOF(_, _) =>
+        if (semicolonIndex != -1) {
+          tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
+        }
+        tokenStream
+      case _ =>
+        if (semicolonIndex != -1) {
+          tokenStream.remove(semicolonIndex, index - semicolonIndex - 1)
+          stripMultiSemicolons(tokenStream, semicolonIndex + 1)
+        }
+        else
+          stripMultiSemicolons(tokenStream, index + 1)
+    }
   }
 
   def scan(sourceString: String): ArrayBuffer[Token] = {
-    var tmpSourceString = sourceString.replace("\r", "")
-    if (tmpSourceString.endsWith("\n"))
-      tmpSourceString = tmpSourceString.dropRight(1)
+    position.source = stripOuterNewlines(sourceString.replace("\r", ""))
+    lineList = position.source.split("\n")
 
-    position.source = tmpSourceString
-    position.lineList = position.source.split("\n")
     scanHelper()
 
+    tokenStream = stripMultiSemicolons(tokenStream)
     var tokenStreamStringList = ""
     tokenStream.foreach(tokenStreamStringList += _ + "\n")
     LOG_HEADER("TOKENS", tokenStreamStringList)
@@ -277,15 +320,10 @@ object Lexer {
     tokenStream
   }
 
-  def clear(): Unit = {
-    position.clear()
-    tokenStream.clear()
-  }
-
   def reportInvalidCharacter(): Unit = {
     ERROR(s"Error: Invalid character: $curr")
     ERROR(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber + 1}:\n")
-    ERROR(s"${position.lineList(position.lineNumber)}")
+    ERROR(s"${lineList(position.lineNumber)}")
     ERROR(s"${" " * position.columnNumber}^\n")
     errorOccurred = true
   }
@@ -293,7 +331,12 @@ object Lexer {
   def warnIdentForKeyword(str: String, ident: String): Unit = {
     WARN(s"$str")
     WARN(s"Line: ${position.lineNumber + 1}, Column: ${position.columnNumber - ident.length + 1}:\n")
-    WARN(s"${position.lineList(position.lineNumber)}")
+    WARN(s"${lineList(position.lineNumber)}")
     WARN(s"${" " * (position.columnNumber - ident.length)}^\n")
+  }
+
+  def clear(): Unit = {
+    position.clear()
+    tokenStream.clear()
   }
 }

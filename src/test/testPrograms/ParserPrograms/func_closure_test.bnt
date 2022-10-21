@@ -1,0 +1,4 @@
+fn a(x: int) -> int -> int = {
+    fn b(y: int) -> int = x + y;
+    b
+};

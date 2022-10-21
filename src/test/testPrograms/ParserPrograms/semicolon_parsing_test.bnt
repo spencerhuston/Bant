@@ -1,0 +1,3 @@
+fn a() -> bool = { false };
+fn b() -> bool = { true };
+fn c() -> bool = { false }; fn d() -> bool = true;

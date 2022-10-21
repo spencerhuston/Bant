@@ -20,12 +20,12 @@ foreach[Residence](residences, (r: Residence) => r.printDimensions())
 
 val house = House(3, 2)
 
-val optHouse: Option[House] = house match {
+val optHouse: Option[House] = match (house) {
     case House(bed, bath) => Some(House(bed, bath))
     case _ => None
 }
 
-println(optHouse match {
+println(match (optHouse) {
     case Some(tmpHouse) => tmpHouse.printDimensions()
     case _ => println("No house")
 })

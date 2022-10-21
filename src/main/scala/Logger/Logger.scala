@@ -15,6 +15,7 @@ object Level extends Enumeration {
 object Logger {
   var level: Level.Value = Level.NONE
   val header = "========================="
+  var lineList: Array[String] = Array[String]()
 
   def setLevel(logLevel: String): Unit = {
     Level.values.find((levelValue: Level.Value) => levelValue.toString == logLevel) match {

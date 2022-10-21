@@ -1,0 +1,4 @@
+match (x) {
+    case _ => false
+    case 1 => true
+}
