@@ -6,7 +6,7 @@ import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, Ident, Keyword, Terminator, Token, Value}
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import TypeChecker._
+import SemanticAnalyzer._
 
 import scala.collection.mutable.ArrayBuffer
 

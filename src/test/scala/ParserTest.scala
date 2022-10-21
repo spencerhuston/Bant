@@ -5,7 +5,7 @@ import Lexer.{Delimiter, EOF, FilePosition, Ident, Keyword, Token}
 import Logger.Logger.lineList
 import Parser.{Alias, AnyCase, ArrayDef, BoolVal, Branch, Case, ConstructorCase, DictDef, FuncApp, IntVal, Let, ListDef, Lit, LitCase, Match, NoOp, NullVal, Prim, Prog, Ref, SetDef, StringVal, TupleAccess, TupleDef, TypeCase, ValueCase}
 import Parser.Parser._
-import TypeChecker._
+import SemanticAnalyzer._
 
 import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.mutable.ArrayBuffer

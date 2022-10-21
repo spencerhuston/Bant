@@ -1,4 +1,4 @@
-package TypeChecker
+package SemanticAnalyzer
 
 import scala.collection.mutable.ArrayBuffer
 
