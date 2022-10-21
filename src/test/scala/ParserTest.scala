@@ -519,8 +519,8 @@ class ParserTest extends AnyFlatSpec {
 
   "Parser.parseRecord" should "parse a record" in {
     clear()
-    tokenStream = Lexer.Lexer.scan("record sealed Person[T] => Animal derives Test { age: int, name: string }")
-    val record = parseRecord
+    tokenStream = Lexer.Lexer.scan("record Person[T] extends Animal derives Test { age: int, name: string }")
+    val record = parseRecord(true)
     assert(record.isSealed)
     assert(record.ident == "Person")
     assert(record.generics.length == 1)
@@ -536,8 +536,8 @@ class ParserTest extends AnyFlatSpec {
 
   "Parser.parseTypeclass" should "parse typeclass" in {
     clear()
-    tokenStream = Lexer.Lexer.scan("typeclass sealed Ord[T] => Eq { greater = (T, T) -> bool }")
-    val typeclass = parseTypeclass
+    tokenStream = Lexer.Lexer.scan("typeclass Ord[T] extends Eq { greater = (T, T) -> bool }")
+    val typeclass = parseTypeclass(true)
     assert(typeclass.isSealed)
     assert(typeclass.ident == "Ord")
     assert(typeclass.genericTypes.length == 1)
@@ -552,12 +552,10 @@ class ParserTest extends AnyFlatSpec {
 
   "Parser.parseInstance" should "parse typeclass instance" in {
     clear()
-    tokenStream = Lexer.Lexer.scan("instance Person : Eq, Ord { fn greater[T](a: T, b: T) -> a > b; }")
+    tokenStream = Lexer.Lexer.scan("instance Person : Eq { fn greater[T](a: T, b: T) -> a > b; }")
     val instance = parseInstance
     assert(instance.adt.ident == "Person")
-    assert(instance.typeclassIdents.length == 2)
-    assert(instance.typeclassIdents.head.ident == "Eq")
-    assert(instance.typeclassIdents(1).ident == "Ord")
+    assert(instance.typeclassIdent.ident == "Eq")
     assert(instance.funcs.length == 1)
     assert(instance.funcs.head.ident == "greater")
     assert(instance.funcs.head.params.length == 2)

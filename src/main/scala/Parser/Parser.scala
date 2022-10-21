@@ -174,6 +174,9 @@ object Parser {
             val afterDummyLet = parseExp
             Let(smp.token, isLazy = false, dummy, smp.expType, smp, afterDummyLet)
           } else {
+            if (index < tokenStream.length - 1) {
+              warn(curr, "Remaining unevaluated expressions. Use \';\' at the end of statements")
+            }
             smp
           }
       }
@@ -735,14 +738,18 @@ object Parser {
         tmpExp
       case Ident(_, _) =>
         val ref = Ref(curr, matchIdent)
-        if (matchOptional(ACCESS)) {
+        if (matchOptional(TUPLE_ACCESS)) {
           val accessIndex = parseTupleAccessIndex
           var tupleAccess = TupleAccess(curr, ref, accessIndex)
 
-          while (matchOptional(ACCESS)) {
+          while (matchOptional(TUPLE_ACCESS)) {
             tupleAccess = TupleAccess(curr, tupleAccess, parseTupleAccessIndex)
           }
           tupleAccess
+        }
+        else if (matchOptional(RECORD_ACCESS)) {
+          val fieldIdent = matchIdent
+          RecordAccess(curr, ref, fieldIdent)
         }
         else
           ref

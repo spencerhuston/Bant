@@ -108,6 +108,9 @@ case class Bird(token: Token,
 case class TupleAccess(token: Token,
                        ref: Exp,
                        accessIndex: IntVal) extends Exp
+case class RecordAccess(token: Token,
+                        recordIdent: Ref,
+                        fieldIdent: String) extends Exp
 
 // General
 case class Let(token: Token,
