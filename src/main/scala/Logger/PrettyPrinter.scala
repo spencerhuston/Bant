@@ -1,26 +1,31 @@
 package Logger
 
-import Parser._
-
-import scala.collection.mutable.ArrayBuffer
-import scala.Console.{RESET, YELLOW}
+import Lexer.Token
+import scala.Console.{RED, RESET, YELLOW}
 
 object PrettyPrinter {
-  def astToString(exp: Any, depth: Int = 0): String = {
-    exp match {
-      case e: Product =>
-        s"${" " * depth}${e.productPrefix}(\n" +
-        s"${(e.productElementNames.toList.takeRight(e.productElementNames.length - 1) zip
-          e.productIterator.toList.takeRight(e.productIterator.length - 1)).
-          map(elem =>
-            s"${" " * (depth + 1)}$YELLOW${elem._1}$RESET: ${
-              elem._2 match {
-                case exp: Exp => "\n" + astToString(exp, depth + 1)
-                case ab: ArrayBuffer[_] => ab.map(x => "\n" + astToString(x, depth + 1)).foldLeft("")(_ + _)
-                case o: Object => o.toString
-              }
-            }\n").foldLeft("")(_ + _)}" +
-        s"${" " * depth})"
+  var expTreeString = ""
+
+  def expTreeToString(obj: Any, depth: Int = 0, paramName: Option[String] = None): Unit = {
+    val indent = "  " * depth
+    val prettyName = paramName.fold("")(x => s"$x: ")
+    val ptype = obj match {
+                  case seq: Iterable[Any] if seq.isEmpty => s"$RED" + s"Empty$RESET"
+                  case _: Iterable[Any] => ""
+                  case obj: Product => obj.productPrefix
+                  case _ => obj.toString
+                }
+
+    expTreeString += s"$indent$YELLOW$prettyName$RESET$ptype\n"
+
+    obj match {
+      case _: Token =>
+      case seq: Iterable[Any] =>
+        seq.foreach(expTreeToString(_, depth + 1))
+      case obj: Product =>
+        (obj.productIterator zip obj.productElementNames)
+          .foreach { case (subObj, paramName) => expTreeToString(subObj, depth + 1, Some(paramName)) }
+      case _ =>
     }
   }
 }
