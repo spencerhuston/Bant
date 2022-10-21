@@ -145,7 +145,7 @@ class ParserTest extends AnyFlatSpec {
     lineList = Array[String]("val")
     tokenStream = ArrayBuffer[Token](Keyword(VAL, "val", fp))
     index = 0
-    assert(matchIdent != "name" && index == 0)
+    assert(matchIdent != "name" && index == 1)
   }
 
   "Parser.isBinaryOperator" must "return true if op is arith or boolean binary op" in {
