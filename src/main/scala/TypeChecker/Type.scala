@@ -20,9 +20,11 @@ case class DictType(keyType: Type,
                     valueType: Type) extends Type
 
 // Fancy
-case class AdtType(ident: String, generics: ArrayBuffer[Type]) extends Type // TODO FIX FOR NESTED GENERICS
+case class AdtType(ident: String,
+                   generics: ArrayBuffer[Type],
+                   fieldNames: ArrayBuffer[String]) extends Type
 case class FuncType(argTypes: ArrayBuffer[Type],
-                    returnType: Type) extends Type // need generic types here
+                    returnType: Type) extends Type
 
 // Type-Checking
 case class UnknownType() extends Type

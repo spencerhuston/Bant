@@ -105,6 +105,7 @@ object Parser {
   def matchIdent: String = {
     if (!curr.isInstanceOf[Ident]) {
       reportBadMatch(curr, "<ident>")
+      advance()
       return ""
     }
 
@@ -848,7 +849,7 @@ object Parser {
           argTypes += parseType
         matchRequired(RETURN_TYPE)
         FuncType(argTypes, parseType)
-      case Ident(ident, _) =>
+      case Ident(ident, _) => // TODO: FIX FOR ADT TYPES
         advance()
         val generics = ArrayBuffer[Type]()
         if (matchOptional(LEFT_BRACKET)) {
@@ -856,7 +857,13 @@ object Parser {
           while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET))
             generics += parseType
         }
-        AdtType(ident, generics)
+        val fieldNames = ArrayBuffer[String]()
+        if (matchOptional(LEFT_PAREN)) {
+          fieldNames += matchIdent
+          while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
+            fieldNames += matchIdent
+        }
+        AdtType(ident, generics, fieldNames)
       case _ =>
         reportBadType(curr)
         advance()
