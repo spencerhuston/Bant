@@ -65,43 +65,31 @@
 
 <doubleQuote> ::= ''
 
-<terminator> ::= `;' | `\\n'
+<terminator> ::= `;'
 
 \end{grammar}
 
-\paragraph{Primitive Types}
+\paragraph{Literals}
 
 \begin{grammar}
 
-<int> ::= [ integer ]
+<\textbf{int}> ::= [ integer ]
 
-<bool> ::= `true' | `false'
+<\textbf{bool}> ::= `true' | `false'
 
-<char> ::= <singleQuote>[ character ]<singleQuote>
+<\textbf{char}> ::= <singleQuote>[ character ]<singleQuote>
 
-<string> ::= <doubleQuote>[ character* ]<doubleQuote>
+<\textbf{string}> ::= <doubleQuote>[ character* ]<doubleQuote>
 
-<null> ::= `null'
+<\textbf{null}> ::= `null'
 
 \end{grammar}
 
-\paragraph{Algebraic Data Types and Type-Traits}
+\paragraph{Type Definitions}
 
 \begin{grammar}
 
-<adt> ::= `type' <ident> [`:' <ident>]`\{'[<ident>`:'<type>[`,' <ident>`:'<type>]*]`\}'
- 
-<typeclass> ::= `typeclass' <ident> `\{'<prog>`\}'
-
-<instance> ::= `instance' <ident>`:'<ident>`\{'[<ident>`='<type>[`,'<ident>`='<type>]* ]`\}'
-
-\end{grammar}
-
-\paragraph{Types}
-
-\begin{grammar}
-
-<type> ::= `int' | `bool' | `char' | `string' | `null'
+<\textbf{type}> ::= `int' | `bool' | `char' | `string' | `null'
 \alt <type> `->' <type>
 \alt `('[<type>[`,' <type>]*]`)' `->' `('[<type>[`,' <type>]*]`)'
 \alt `List' | `Array' | `Set' `['<type>`]'
@@ -115,11 +103,66 @@
 
 \begin{grammar}
 
-<arithOp> ::= `+' | `-' | `*' | `/' | `\%'
+<\textbf{arithOp}> ::= `+' | `-' | `*' | `/' | `\%'
 
-<boolOp> ::= `<' | `>' | `<=' | `>=' | `!' | `!=' | `==' | `\&\&' | `||'
+<\textbf{boolOp}> ::= `<' | `>' | `<=' | `>=' | `!' | `!=' | `==' | `\&\&' | `||'
 
-<op> ::= <arithOp> | <boolOp> 
+<\textbf{op}> ::= <arithOp> | <boolOp> 
+
+\end{grammar}
+
+\paragraph{Pattern Matching}
+
+\begin{grammar}
+
+<\textbf{value}> ::= <ident>`('[<value>[`,'<value>]]`)'
+\alt <prim>
+\alt `\_'
+
+<\textbf{caseVal}> ::= <ident>`:'<type>
+\alt <value>
+
+<\textbf{match}> ::= `match'`('<smp>`)' `\{'`case'<caseVal>`=>'<smp>[`case'<caseVal>`=>'<smp>]*`\}'
+
+\end{grammar}
+
+\paragraph{Types and Typeclasses}
+
+\begin{grammar}
+
+<\textbf{alias}> ::= `alias' <ident> `=' <type>
+
+<lowerBoundOp> ::= `:>'
+
+<upperBoundOp> ::= `<:'
+
+<bounding> ::= [<lowerBoundOp><ident>][<upperBoundOp><ident>]
+
+<generics> ::= `['<ident><bounding>[`,' <ident><bounding>]*`]'
+
+<genericIdent> ::= <ident>[<generics>]
+
+<stmntEnd> ::= <terminator><exp>
+
+<derive> ::= `derives' <ident>
+
+<constructor> ::= <ident>[`,'<ident>]*
+
+<cosntructorList> ::= <constructor>[`|'<constructor>]
+
+<\textbf{adt}> ::= `type' <genericIdent>[<derive>]`\{'[<cosntructorLists>]`\}'<stmntEnd>
+
+<members> ::= <ident>`:'<type>[`,'<ident>`:'<type>]*
+
+<extend> ::= `extends'<genericIdent>
+
+<\textbf{record}> ::= [`sealed']`record'<genericIdent>[<extend>][<derive>]`\{'[<members>]`\}'<stmntEnd>
+
+<signatures> ::= <ident>`='<type>[`,'<ident>`='<type>]*
+ 
+<\textbf{typeclass}> ::= [`sealed']`typeclass'<genericIdent>[`extends'<ident>]`\{'[<signatures>]`\}'<stmntEnd>
+
+<\textbf{instance}> ::= `instance' <ident>`of'<ident>`\{'[<funDef>]*`\}'<stmntEnd>
 
 \end{grammar}
 
@@ -127,33 +170,15 @@
 
 \begin{grammar}
 
-<arg> ::= <ident>`:'<type>[`='<atom>]
+<param> ::= <ident>`:'<type>[`=' <atom> | <collection>]
 
-<boundOp> ::= `:>' | `<:'
+<\textbf{funDef}> ::= `fn' <genericIdent>`('[<param> [`,' <param>]* ]`)'[`->'<type>]`='<smp><terminator>
 
-<boundList> ::= `\{'<ident>[`,'<ident>]*`\}'
+<prog> ::= [<funDef>]*<exp>
 
-<templateTypes> ::= `['<type>[<boundOp><boundList>][`,' <type>[<boundOp><boundList>]]*`]'
+<\textbf{app}> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
 
-<funDef> ::= `fn' <ident>[<templateTypes>]`('[<arg> [`,' <arg>]* ]`)'[`->'<type>]`='<smp><terminator>
-
-<prog> ::= [<funDef>]*
-
-<app> ::= <atom>[ [`['<type>[`,' <type>]*`]' ]* [`('[<smp>[`,' <smp>]*]`)']* ]
-
-<anonLmbd> ::= <arg> `=>' <smp>
-
-\end{grammar}
-
-\paragraph{Pattern Matching and Switches}
-
-\begin{grammar}
-
-<match> ::= `match' `('<ident>`)' `\{'`case' <type>`=>' <smp>[`,' `case' <type> `=>' <smp>]*`\}'
-
-<switch> ::= `switch' `('<atom>`)' `\{'`case' <atom>`=>' <smp>[`,' `case' <atom> `=>' <smp>]*`\}'
-
-<matchSwitch> ::= <match> | <switch>
+<\textbf{lambda}> ::= `|'[<param> [`,' <param>]* ]`|'[`->'<type>]`='<smp>
 
 \end{grammar}
 
@@ -166,7 +191,6 @@
 \alt <ident>[`.'<ident>]*
 
 <tight> ::= <app>[`|>'<app>]
-\alt [`('<smp>`)']+
 \alt '\{'<exp>`\}'
 
 <utight> ::= [<op>]<tight>
@@ -175,12 +199,14 @@
 \alt `if' `('<smp>`)' <smp> [`else' <smp>]
 \alt `List' | `Tuple' | `Array' | `Set' `\{'[<smp>[`,' <smp>]*]`\}'
 \alt `Dict' `\{'[<smp>`:'<smp>[`,' <smp>`:'<smp>]*]`\}'
-\alt <matchSwitch>
+\alt <match>
+\alt <alias>
+\alt <adt>
+\alt <record>
 \alt <typeclass>
 \alt <instance>
-\alt <adt>
 \alt <prog>
-\alt <anonLmbd>
+\alt <lambda>
 
 <exp> ::= <smp>[<terminator><exp>]
 \alt [`lazy'] `val' <ident>[`:'<type>] `=' <smp><terminator><exp>

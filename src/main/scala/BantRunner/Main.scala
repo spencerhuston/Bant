@@ -6,6 +6,8 @@ import Lexer.Lexer.scan
 import Lexer.{Lexer, Token}
 import Logger.Level
 import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, setLevel}
+import Logger.PrettyPrinter.astToString
+import Parser.Parser.parse
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -36,9 +38,14 @@ object Main {
       WARN("Warning: Empty source file")
     } else if (Lexer.errorOccurred) {
       ERROR("Error(s) occurred, stopping run")
+    } else {
+      var rootExp = parse(tokenStream)
+      if (Parser.Parser.warnings > 0)
+        WARN(s"${Parser.Parser.warnings} warnings occurred")
+      if (Parser.Parser.numErrors > 0)
+        ERROR(s"${Parser.Parser.numErrors} errors occurred")
+      LOG_HEADER("Untyped AST", astToString(rootExp))
     }
-
-    // parser phase
   }
 
   def clear(): Unit = {

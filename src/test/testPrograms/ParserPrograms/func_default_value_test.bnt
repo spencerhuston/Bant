@@ -1,0 +1,1 @@
+fn a(x: int = 5) -> int = x + 2;

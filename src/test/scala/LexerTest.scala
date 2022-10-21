@@ -1,6 +1,7 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import BantRunner.Main
-import Lexer.{Lexer, SyntaxDefinitions}
+import Lexer._
+import Logger.Logger.lineList
 import SyntaxDefinitions.{Delimiters, Keywords, RawDelimiters}
 
 class LexerTest extends AnyFlatSpec {
@@ -51,19 +52,19 @@ class LexerTest extends AnyFlatSpec {
     assert(!Lexer.isComment)
   }
 
-  "Lexer.isTerminator" should "return true if curr is terminator" in {
+  "Lexer.isSemicolon" should "return true if curr is terminator" in {
     Lexer.clear()
     Lexer.position.source = ";"
-    assert(Lexer.isTerminator)
+    assert(Lexer.isSemicolon)
 
     Lexer.position.source = "\n"
-    assert(Lexer.isTerminator)
+    assert(Lexer.isNewline)
   }
 
   it should "return false if curr is not terminator" in {
     Lexer.clear()
     Lexer.position.source = "c"
-    assert(!Lexer.isTerminator)
+    assert(!Lexer.isNewline && !Lexer.isSemicolon)
   }
 
   "Lexer.isWhitespace" should "return true if curr is whitespace" in {
@@ -191,6 +192,14 @@ class LexerTest extends AnyFlatSpec {
       Lexer.tokenStream(0).tokenText == "c")
   }
 
+  it should "add delim token to tokenStream" in {
+    Lexer.clear()
+    Lexer.scan("!")
+    assert(Lexer.tokenStream.size == 2 &&
+      Lexer.tokenStream(0).tokenText == "!" &&
+      Lexer.tokenStream(0).isInstanceOf[Delimiter])
+  }
+
   "Lexer.handleNumValue" should "add to tokenStream numeric value exists" in {
     Lexer.clear()
     Lexer.scan("12345")
@@ -217,10 +226,40 @@ class LexerTest extends AnyFlatSpec {
       Lexer.tokenStream(0).tokenText == "test")
   }
 
-  "Lexer.scan and Lexer.scanHelper" should "make entire tokenStream" in {
+  "Lexer.scan" should "make entire tokenStream" in {
     Lexer.clear()
     Lexer.scan("val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }\n\nforeach[Residence](residences, (r: Residence) => r.printDimensions())\n\nval house = House(3, 2)\n\nval optHouse: Option[House] = house match {\n    case House(bed, bath) => Some(House(bed, bath))\n    case _ => None\n}")
-    assert(Lexer.tokenStream.size == 102)
+    assert(Lexer.tokenStream.size == 93)
+  }
+
+  it should "skip to next line if there is a comment" in {
+    Lexer.clear()
+    Lexer.scan("#test\ntest")
+    assert(Lexer.tokenStream.length == 2 &&
+           Lexer.tokenStream.head.isInstanceOf[Ident])
+  }
+
+  it should "add Terminator token if it encounters a semicolon" in {
+    Lexer.clear()
+    Lexer.scan("test;test")
+    assert(Lexer.tokenStream.length == 4 &&
+      Lexer.tokenStream(1).isInstanceOf[Terminator])
+  }
+
+  it should "throw error if invalid character encountered" in {
+    Lexer.clear()
+    Lexer.scan("@")
+    assert(Lexer.tokenStream.length == 1 &&
+           Lexer.tokenStream(0).isInstanceOf[EOF] &&
+           Lexer.errorOccurred)
+  }
+
+  "Lexer.stripMultiSemicolons" should "reduce occurrences of multiple semicolons to just 1" in {
+    Lexer.clear()
+    Lexer.scan("test;;test;;")
+    assert(Lexer.tokenStream.length == 5 &&
+           Lexer.tokenStream(1).isInstanceOf[Terminator] &&
+           Lexer.tokenStream(3).isInstanceOf[Terminator])
   }
 
   "Lexer.clear" should "clear all Lexer & Position vars" in {
@@ -235,7 +274,7 @@ class LexerTest extends AnyFlatSpec {
       Lexer.position.lineText == "" &&
       !Lexer.position.inQuotes &&
       Lexer.position.source == "" &&
-      Lexer.position.lineList.isEmpty &&
+      lineList.isEmpty &&
       Lexer.tokenStream.isEmpty)
   }
 
@@ -368,9 +407,9 @@ class LexerTest extends AnyFlatSpec {
 
     println(Lexer.position.curr)
 
-    Lexer.position.newline(true)
+    Lexer.position.newline()
 
-    assert(Lexer.position.index == 6 &&
+    assert(Lexer.position.index == 5 &&
       Lexer.position.lineNumber == 3 &&
       Lexer.position.columnNumber == 0 &&
       Lexer.position.lineText == "")
@@ -380,7 +419,7 @@ class LexerTest extends AnyFlatSpec {
     Lexer.clear()
     Lexer.position.lineNumber = 1
     Lexer.position.columnNumber = 5
-    Lexer.position.lineList = Array("test", "test2")
+    lineList = Array("test", "test2")
     val fp = Lexer.position.filePositionFactory
     assert(fp.line == 1 && fp.column == 5 && fp.lineText == "test2")
   }
@@ -393,7 +432,7 @@ class LexerTest extends AnyFlatSpec {
     Lexer.position.lineText = "test"
     Lexer.position.inQuotes = true
     Lexer.position.source = "test\ntest2"
-    Lexer.position.lineList = Array("test", "test2")
+    lineList = Array("test", "test2")
 
     Lexer.position.clear()
 
@@ -403,6 +442,6 @@ class LexerTest extends AnyFlatSpec {
           Lexer.position.lineText == "" &&
           !Lexer.position.inQuotes &&
           Lexer.position.source == "" &&
-          Lexer.position.lineList.isEmpty)
+          lineList.isEmpty)
   }
 }

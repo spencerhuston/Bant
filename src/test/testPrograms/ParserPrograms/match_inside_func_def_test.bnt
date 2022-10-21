@@ -1,0 +1,5 @@
+fn f() -> int = {
+    match (x) {
+        case _ => 0
+    }
+};
