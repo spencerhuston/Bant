@@ -1,35 +1,19 @@
-type Residence {
-    b: int,
-    c: int
-}
+type QuadType derives Floppable { int, int, int, int };
+sealed record QuadRecord derives Floppable { a: int, b: int, c: int, d: int };
 
-type House : Residence {  }
-type Apartment : Residence { }
-type Condo : Residence { }
+typeclass Floppable[T] {
+    flop = T -> T
+};
 
-typeclass ResidenceMethods {
-    printDimensions = () -> null
-}
+instance QuadType of Floppable {
+    fn flop(q: QuadType(a, b, c, d)) -> QuadType = QuadType(a, c, b, d);
+};
 
-instance Residence : ResidenceMethods {
-    fn printDimensions() -> null = {
-        println(this.bed)
-        println(this.bath)
-    }
-}
+instance QuadRecord of Floppable {
+    fn flop(q: QuadRecord) -> QuadRecord = QuadRecord(q::a, q::c, q::b, q::d);
+};
 
-val residences: List[Residence] = List { House(3, 2), Apartment(1, 1), Condo(2, 1) }
-
-foreach[Residence](residences, (r: Residence) => r.printDimensions())
-
-val house = House(3, 2)
-
-val optHouse: Option[House] = house match {
-    case House(bed, bath) => Some(House(bed, bath))
-    case _ => None
-}
-
-println(optHouse match {
-    case Some(tmpHouse) => tmpHouse.printDimensions()
-    case _ => println("No house")
-})
+val q = Quad(1, 2, 3, 4);
+print(q);
+val qFlopped = flop(q);
+print(qFlopped)
