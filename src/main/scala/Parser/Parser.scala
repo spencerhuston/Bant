@@ -370,7 +370,7 @@ object Parser {
 
     var derivedFrom = Ref(curr, "$None$")
     if (matchOptional(DERIVES)) {
-      derivedFrom = Ref(curr, matchIdent)
+      derivedFrom = parseRef
     }
 
     matchRequired(LEFT_BRACE)
@@ -389,7 +389,7 @@ object Parser {
   }
 
   def parseSuperType: Ref = {
-    if (matchOptional(EXTENDS)) Ref(curr, matchIdent)
+    if (matchOptional(EXTENDS)) parseRef
     else Ref(curr, "$None$")
   }
 
@@ -406,7 +406,7 @@ object Parser {
 
     var derivedFrom = Ref(curr, "$None$")
     if (matchOptional(DERIVES)) {
-      derivedFrom = Ref(curr, matchIdent)
+      derivedFrom = parseRef
     }
 
     matchRequired(LEFT_BRACE)
@@ -437,7 +437,7 @@ object Parser {
     matchRequired(LEFT_BRACE)
     val signatures = ArrayBuffer[Signature]()
     while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
-      val name = Ref(curr, matchIdent)
+      val name = parseRef
       matchRequired(ASSIGNMENT)
       val signature = parseType
       signatures += Signature(name, signature)
@@ -464,12 +464,12 @@ object Parser {
     LOG(DEBUG, s"parseInstance: $curr")
     val token = curr
     matchRequired(INSTANCE)
-    val adtIdent = Ref(curr, matchIdent)
+    val adtIdent = parseRef
     matchRequired(OF)
-    val typeclassIdent = Ref(curr, matchIdent)
+    val typeclassIdent = parseRef
 
     matchRequired(LEFT_BRACE)
-    val funcs = ArrayBuffer[FunDef]()
+    val funcs = ArrayBuffer[FuncDef]()
     while (matchOptional(FN)) {
       funcs += parseFunDef
     }
@@ -481,7 +481,7 @@ object Parser {
   def parseProg: Prog = {
     LOG(DEBUG, s"parseProg: $curr")
     val token = curr
-    val funcs = ArrayBuffer[FunDef]()
+    val funcs = ArrayBuffer[FuncDef]()
     while (matchOptional(FN)) {
       funcs += parseFunDef
     }
@@ -533,7 +533,7 @@ object Parser {
     }
   }
 
-  def parseFunDef: FunDef = {
+  def parseFunDef: FuncDef = {
     LOG(DEBUG, s"parseFunDef: $curr")
 
     val token = curr
@@ -553,7 +553,7 @@ object Parser {
     val body = parseSimpleExp
     matchStatementEndRequired()
 
-    FunDef(token, ident, genericTypes, params, returnType, body)
+    FuncDef(token, ident, genericTypes, params, returnType, body)
   }
 
   def parseLambda: Prog = {
@@ -578,7 +578,7 @@ object Parser {
     val body = parseSimpleExp
 
     val funDefIdent = ident + "_def"
-    Prog(token, ArrayBuffer[FunDef](FunDef(token, funDefIdent, ArrayBuffer[Generic](), params, returnType, body)), Ref(token, funDefIdent))
+    Prog(token, ArrayBuffer[FuncDef](FuncDef(token, funDefIdent, ArrayBuffer[Generic](), params, returnType, body)), Ref(token, funDefIdent))
   }
 
   def parseUtight(min: Int): Exp = {
@@ -677,17 +677,6 @@ object Parser {
       ident
   }
 
-  def parseTupleAccessIndex: IntVal = {
-    LOG(DEBUG, s"parseTupleAccessIndex: $curr")
-    val accessIndex = parseLit
-    if (!accessIndex.isInstanceOf[Lit] && !accessIndex.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
-      reportBadMatch(curr, "<IntVal>", "Tuple access requires integer literal")
-      IntVal(-1)
-    }
-    else
-      accessIndex.asInstanceOf[Lit].value.asInstanceOf[IntVal]
-  }
-
   def parseCollectionValue: Exp = {
     LOG(DEBUG, s"parseCollectionValue: $curr")
     val token = curr
@@ -737,6 +726,21 @@ object Parser {
     }
   }
 
+  def parseTupleAccessIndex: IntVal = {
+    LOG(DEBUG, s"parseTupleAccessIndex: $curr")
+    val accessIndex = parseLit
+    if (!accessIndex.isInstanceOf[Lit] && !accessIndex.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
+      reportBadMatch(curr, "<IntVal>", "Tuple access requires integer literal")
+      IntVal(-1)
+    }
+    else
+      accessIndex.asInstanceOf[Lit].value.asInstanceOf[IntVal]
+  }
+
+  def parseRef: Ref = {
+    Ref(curr, matchIdent)
+  }
+
   def parseAtom: Exp = {
     LOG(DEBUG, s"parseAtom: $curr")
     curr match {
@@ -751,7 +755,7 @@ object Parser {
         matchRequired(RIGHT_PAREN)
         tmpExp
       case Ident(_, _) =>
-        val ref = Ref(curr, matchIdent)
+        val ref = parseRef
         if (matchOptional(TUPLE_ACCESS)) {
           val accessIndex = parseTupleAccessIndex
           var tupleAccess = TupleAccess(curr, ref, accessIndex)

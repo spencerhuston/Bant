@@ -1,9 +1,9 @@
+fn f(x: int) -> int = x * 2;
+fn g(y: int) -> int = y + 3;
 
-type None { };
-type Some[T] { T };
-type Option[T] { Some[T] | None };
-type Node[T] {
-    Option[Node[T]], Option[Node[T]]
+fn compose[A](f: A -> A, g: A -> A) -> A -> A = {
+    |a: A| -> A = a |> g() |> f()
 };
 
-val node = Node[int](Some(5), None)
+val h: int -> int = compose[int](f, g);
+print(h(4))

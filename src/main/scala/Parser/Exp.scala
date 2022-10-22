@@ -79,24 +79,24 @@ case class Typeclass(token: Token,
 case class Instance(token: Token,
                     adt: Ref,
                     typeclassIdent: Ref,
-                    funcs: ArrayBuffer[FunDef],
+                    funcs: ArrayBuffer[FuncDef],
                     afterInstance: Exp) extends Exp
 
 // Functions
 case class Prog(token: Token,
-                funcs: ArrayBuffer[FunDef],
+                funcs: ArrayBuffer[FuncDef],
                 afterProg: Exp) extends Exp
 case class Generic(ident: String, lowerBound: String, upperBound: String)
 case class Parameter(token: Token,
                      ident: String,
                      paramType: Type,
                      default: Exp) extends Exp
-case class FunDef(token: Token,
-                  ident: String,
-                  generics: ArrayBuffer[Generic],
-                  params: ArrayBuffer[Parameter],
-                  returnType: Type,
-                  body: Exp) extends Exp
+case class FuncDef(token: Token,
+                   ident: String,
+                   generics: ArrayBuffer[Generic],
+                   params: ArrayBuffer[Parameter],
+                   returnType: Type,
+                   body: Exp) extends Exp
 
 // Function Application/Data & Record Construction/Collection Access/
 case class FuncApp(token: Token,
