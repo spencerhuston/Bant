@@ -6,7 +6,7 @@ import Lexer.SyntaxDefinitions.Keywords._
 import Lexer.{Delimiter, EOF, Ident, Keyword, Terminator, Token, Value}
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import TypeChecker._
+import SemanticAnalyzer._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -214,11 +214,6 @@ object Parser {
     LOG(DEBUG, s"parseSimpleExp: $curr")
     curr match {
       case Keyword(IF, _, _) => parseBranch
-      case Keyword(LIST, _, _) => parseCollectionValue
-      case Keyword(ARRAY, _, _) => parseCollectionValue
-      case Keyword(SET, _, _) => parseCollectionValue
-      case Keyword(TUPLE, _, _) => parseCollectionValue
-      case Keyword(DICT, _, _) => parseCollectionValue
       case Keyword(MATCH, _, _) => parseMatch
       case Keyword(ALIAS, _, _) => parseAlias
       case Keyword(TYPE, _, _) => parseAdt
@@ -247,55 +242,6 @@ object Parser {
       elseBranch = parseSimpleExp
 
     Branch(token, condition, ifBranch, elseBranch)
-  }
-
-  def parseCollectionValue: Exp = {
-    LOG(DEBUG, s"parseCollectionValue: $curr")
-    val token = curr
-    curr match {
-      case Keyword(LIST, _, _) =>
-        advance()
-        matchRequired(LEFT_BRACE)
-        val values = ArrayBuffer[Exp]()
-        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
-          values += parseSimpleExp
-        ListDef(token, values)
-      case Keyword(ARRAY, _, _) =>
-        advance()
-        matchRequired(LEFT_BRACE)
-        val values = ArrayBuffer[Exp]()
-        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
-          values += parseSimpleExp
-        ArrayDef(token, values)
-      case Keyword(SET, _, _) =>
-        advance()
-        matchRequired(LEFT_BRACE)
-        val values = ArrayBuffer[Exp]()
-        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
-          values += parseSimpleExp
-        SetDef(token, values)
-      case Keyword(TUPLE, _, _) =>
-        advance()
-        matchRequired(LEFT_BRACE)
-        val values = ArrayBuffer[Exp]()
-        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
-          values += parseSimpleExp
-        TupleDef(token, values)
-      case Keyword(DICT, _, _) =>
-        advance()
-        matchRequired(LEFT_BRACE)
-        val mapping = ArrayBuffer[Map]()
-        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
-          val key = parseSimpleExp
-          matchRequired(COLON)
-          val value = parseSimpleExp
-          mapping += Map(key, value)
-        }
-        DictDef(token, mapping)
-      case _ =>
-        reportUnexpected(curr)
-        none
-    }
   }
 
   def parseMatch: Match = {
@@ -675,7 +621,20 @@ object Parser {
         val tmpExp = parseSimpleExp
         matchRequired(RIGHT_BRACE)
         tmpExp
-      case _ => parseApplication
+      case _ =>
+        var innerApp = parseApplication
+        while (matchOptional(FUNC_CHAIN)) {
+          val outerApp = parseApplication
+          if (!outerApp.isInstanceOf[FuncApp]) {
+            reportBadMatch(outerApp.token,
+                  "<application>",
+                     "Function composition operator \"|>\" expects function application on right side of expression.")
+            return none
+          }
+          outerApp.asInstanceOf[FuncApp].arguments.insert(0, innerApp)
+          innerApp = outerApp
+        }
+        innerApp
     }
   }
 
@@ -729,9 +688,63 @@ object Parser {
       accessIndex.asInstanceOf[Lit].value.asInstanceOf[IntVal]
   }
 
+  def parseCollectionValue: Exp = {
+    LOG(DEBUG, s"parseCollectionValue: $curr")
+    val token = curr
+    curr match {
+      case Keyword(LIST, _, _) =>
+        advance()
+        matchRequired(LEFT_BRACE)
+        val values = ArrayBuffer[Exp]()
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
+          values += parseSimpleExp
+        ListDef(token, values)
+      case Keyword(ARRAY, _, _) =>
+        advance()
+        matchRequired(LEFT_BRACE)
+        val values = ArrayBuffer[Exp]()
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
+          values += parseSimpleExp
+        ArrayDef(token, values)
+      case Keyword(SET, _, _) =>
+        advance()
+        matchRequired(LEFT_BRACE)
+        val values = ArrayBuffer[Exp]()
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
+          values += parseSimpleExp
+        SetDef(token, values)
+      case Keyword(TUPLE, _, _) =>
+        advance()
+        matchRequired(LEFT_BRACE)
+        val values = ArrayBuffer[Exp]()
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
+          values += parseSimpleExp
+        TupleDef(token, values)
+      case Keyword(DICT, _, _) =>
+        advance()
+        matchRequired(LEFT_BRACE)
+        val mapping = ArrayBuffer[Map]()
+        while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
+          val key = parseSimpleExp
+          matchRequired(COLON)
+          val value = parseSimpleExp
+          mapping += Map(key, value)
+        }
+        DictDef(token, mapping)
+      case _ =>
+        reportUnexpected(curr)
+        none
+    }
+  }
+
   def parseAtom: Exp = {
     LOG(DEBUG, s"parseAtom: $curr")
     curr match {
+      case Keyword(LIST, _, _) => parseCollectionValue
+      case Keyword(ARRAY, _, _) => parseCollectionValue
+      case Keyword(SET, _, _) => parseCollectionValue
+      case Keyword(TUPLE, _, _) => parseCollectionValue
+      case Keyword(DICT, _, _) => parseCollectionValue
       case Delimiter(LEFT_PAREN, _, _) =>
         matchRequired(LEFT_PAREN)
         val tmpExp = parseSimpleExp

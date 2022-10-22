@@ -2,7 +2,7 @@ package Parser
 
 import Lexer.SyntaxDefinitions.Delimiters
 import Lexer.Token
-import TypeChecker.{Type, UnknownType}
+import SemanticAnalyzer.{Type, UnknownType}
 
 import scala.collection.mutable.ArrayBuffer
 
