@@ -1,4 +1,3 @@
-
 type None { };
 type Some[T] { T };
 type Option[T] { Some[T] | None };
