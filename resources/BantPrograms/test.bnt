@@ -1,2 +1,9 @@
-List { 1, 2, 3 }
-|> x
+
+type None { };
+type Some[T] { T };
+type Option[T] { Some[T] | None };
+type Node[T] {
+    Option[Node[T]], Option[Node[T]]
+};
+
+val node = Node[int](Some(5), None)
