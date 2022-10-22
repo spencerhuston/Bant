@@ -38,8 +38,7 @@ object Delimiters extends Enumeration {
   val ASSIGNMENT: Delimiters.Value = Value("=")
   val LOWER_BOUND: Delimiters.Value = Value(":>")
   val UPPER_BOUND: Delimiters.Value = Value("<:")
-  val BIRD: Delimiters.Value = Value("|>")
-  val BIRD_PLACEMENT: Delimiters.Value = Value("$")
+  val FUNC_CHAIN: Delimiters.Value = Value("|>")
   val LAMBDA: Delimiters.Value = Value("|")
 
   def getValue(str: String): Option[Delimiters.Value] = {

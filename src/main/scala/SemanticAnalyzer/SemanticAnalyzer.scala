@@ -1,0 +1,5 @@
+package SemanticAnalyzer
+
+object SemanticAnalyzer {
+
+}
