@@ -1,6 +1,8 @@
 package Logger
 
 import Lexer.Token
+import Parser.Exp
+
 import scala.Console.{RED, RESET, YELLOW}
 
 object PrettyPrinter {
