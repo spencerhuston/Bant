@@ -9,6 +9,7 @@ object PrettyPrinter {
   var expTreeString = ""
 
   def expTreeToString(obj: Any, depth: Int = 0, paramName: Option[String] = None): Unit = {
+    // Object Header
     val indent = "  " * depth
     val prettyName = paramName.fold("")(x => s"$x: ")
     val ptype = obj match {
@@ -20,6 +21,14 @@ object PrettyPrinter {
 
     expTreeString += s"$indent$YELLOW$prettyName$RESET$ptype\n"
 
+    // Expression Type
+    obj match {
+      case exp: Exp =>
+        expTreeString += s"${"  " * (depth + 1)}${YELLOW}expType:$RESET ${exp.expType.printType()}\n"
+      case _ =>
+    }
+
+    // Recurse into object members
     obj match {
       case _: Token =>
       case seq: Iterable[Any] =>

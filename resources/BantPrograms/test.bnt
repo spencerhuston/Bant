@@ -1,9 +1,2 @@
-fn f(x: int) -> int = x * 2;
-fn g(y: int) -> int = y + 3;
-
-fn compose[A](f: A -> A, g: A -> A) -> A -> A = {
-    |a: A| -> A = a |> g() |> f()
-};
-
-val h: int -> int = compose[int](f, g);
-print(h(4))
+val a: int = 5;
+a

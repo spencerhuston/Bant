@@ -10,6 +10,7 @@ import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, setLevel}
 import Logger.PrettyPrinter.{expTreeString, expTreeToString}
 import Parser.Exp
 import Parser.Parser.parse
+import SemanticAnalyzer.SemanticAnalyzer.analyze
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -48,9 +49,11 @@ object Main {
     untypedRootExp
   }
 
-  def runSemanticAnalyzer(exp: Exp): Unit = {
-    // TODO
-    ()
+  def runSemanticAnalyzer(exp: Exp): Exp = {
+    val typedRootExp = analyze(exp)
+    expTreeToString(typedRootExp)
+    LOG_HEADER("Typed AST", expTreeString)
+    typedRootExp
   }
 
   def run(args: Array[String]): Unit = {
