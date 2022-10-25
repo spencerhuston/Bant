@@ -5,12 +5,11 @@ import BantRunner.FileReader.readBantSource
 import Lexer.Lexer.scan
 import Lexer.{Lexer, Token}
 import Logger.Level
-import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, setLevel}
-import Logger.PrettyPrinter.{expTreeString, expTreeToString}
+import Logger.PrettyPrinter.{expTreeString, expTreeToString, printAST}
 import Parser.Exp
 import Parser.Parser.parse
-import SemanticAnalyzer.SemanticAnalyzer.analyze
+import SemanticAnalyzer.SemanticAnalyzer.eval
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -50,9 +49,8 @@ object Main {
   }
 
   def runSemanticAnalyzer(exp: Exp): Exp = {
-    val typedRootExp = analyze(exp)
-    expTreeToString(typedRootExp)
-    LOG_HEADER("Typed AST", expTreeString)
+    val typedRootExp = eval(exp)
+    LOG_HEADER("Typed AST", printAST(typedRootExp))
     typedRootExp
   }
 

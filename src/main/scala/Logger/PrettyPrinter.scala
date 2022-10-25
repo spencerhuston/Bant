@@ -2,11 +2,18 @@ package Logger
 
 import Lexer.Token
 import Parser.Exp
+import SemanticAnalyzer.Type
 
 import scala.Console.{RED, RESET, YELLOW}
 
 object PrettyPrinter {
   var expTreeString = ""
+
+  def printAST(exp: Exp): String = {
+    expTreeString = ""
+    expTreeToString(exp)
+    expTreeString
+  }
 
   def expTreeToString(obj: Any, depth: Int = 0, paramName: Option[String] = None): Unit = {
     // Object Header
@@ -15,6 +22,7 @@ object PrettyPrinter {
     val ptype = obj match {
                   case seq: Iterable[Any] if seq.isEmpty => s"$RED" + s"Empty$RESET"
                   case _: Iterable[Any] => ""
+                  case t if t.isInstanceOf[Type] => t.asInstanceOf[Type].printType()
                   case obj: Product => obj.productPrefix
                   case _ => obj.toString
                 }
@@ -24,7 +32,9 @@ object PrettyPrinter {
     // Expression Type
     obj match {
       case exp: Exp =>
-        expTreeString += s"${"  " * (depth + 1)}${YELLOW}expType:$RESET ${exp.expType.printType()}\n"
+        expTreeString += s"${"  " * (depth + 1)}" +
+                          s"${YELLOW}expType:$RESET " +
+                          s"${exp.expType.printType()}\n"
       case _ =>
     }
 
