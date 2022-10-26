@@ -1,2 +1,4 @@
-val a: int = 5;
-a
+val a = 5;
+val b = 2 + a;
+val c: bool = a + b - 3 == 11;
+c

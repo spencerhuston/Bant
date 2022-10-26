@@ -237,7 +237,7 @@ object Parser {
     matchRequired(RIGHT_PAREN)
     val ifBranch = parseSimpleExp
 
-    var elseBranch: Exp = Lit(curr, NullVal())
+    var elseBranch: Exp = Lit(curr, NullVal()).usingType(NullType())
     if (matchOptional(ELSE))
       elseBranch = parseSimpleExp
 

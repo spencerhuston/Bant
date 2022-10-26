@@ -1,11 +1,24 @@
 package Lexer.SyntaxDefinitions
 
+import SemanticAnalyzer.{ArrayType, BoolType, CharType, DictType, IntType, ListType, NullType, SetType, StringType, TupleType, Type}
+
 object Delimiters extends Enumeration {
   val PLUS: Delimiters.Value = Value("+")
+  def plusTypes(t: Type): Boolean = t match {
+    case IntType() | CharType() | StringType() |
+         ListType(_) | ArrayType(_) | SetType(_) |
+         DictType(_, _) => true
+    case _ => false
+  }
+
   val MINUS: Delimiters.Value = Value("-")
   val MULTIPLY: Delimiters.Value = Value("*")
   val DIVIDE: Delimiters.Value = Value("/")
   val MODULUS: Delimiters.Value = Value("%")
+  def arithTypesNotPlus(t: Type): Boolean = t match {
+    case IntType() => true
+    case _ => false
+  }
 
   val arithmeticOperators: Delimiters.ValueSet = ValueSet(PLUS, MINUS, MULTIPLY, DIVIDE, MODULUS)
 
@@ -13,11 +26,27 @@ object Delimiters extends Enumeration {
   val GREATER_THAN: Delimiters.Value = Value(">")
   val LESS_THAN_OR_EQUAL: Delimiters.Value = Value("<=")
   val GREATER_THAN_OR_EQUAL: Delimiters.Value = Value(">=")
-  val NOT: Delimiters.Value = Value("!")
+  def looseComparisonTypes(t: Type): Boolean = t match {
+    case IntType() | BoolType() | CharType() | StringType() => true
+    case _ => false
+  }
+
   val NOT_EQUAL: Delimiters.Value = Value("!=")
   val EQUAL: Delimiters.Value = Value("==")
+  def strictComparisonTypes(t: Type): Boolean = t match {
+    case IntType() | BoolType() | CharType() | StringType() | NullType() |
+         ListType(_) | ArrayType(_) | SetType(_) |
+         DictType(_, _) | TupleType(_) => true
+    case _ => false
+  }
+
+  val NOT: Delimiters.Value = Value("!")
   val AND: Delimiters.Value = Value("&&")
   val OR: Delimiters.Value = Value("||")
+  def logicTypes(t: Type): Boolean = t match {
+    case BoolType() => true
+    case _ => false
+  }
 
   val booleanOperators: Delimiters.ValueSet = ValueSet(LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
     NOT, NOT_EQUAL, EQUAL, AND, OR)

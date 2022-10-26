@@ -1,5 +1,6 @@
 package SemanticAnalyzer
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 abstract class Type {
@@ -9,6 +10,19 @@ abstract class Type {
 object TypeUtil {
   def printListType(types: ArrayBuffer[Type]): String = {
     types.tail.foldLeft(types.head.printType())(_ + "," + _.printType)
+  }
+
+  def isLiteralOrCollectionType(t: Type): Boolean = {
+    t match {
+      case IntType() | BoolType() | CharType() | StringType() | NullType() => true
+      case ListType(lt) => isLiteralOrCollectionType(lt)
+      case ArrayType(at) => isLiteralOrCollectionType(at)
+      case SetType(st) => isLiteralOrCollectionType(st)
+      case TupleType(lts) => lts.forall(isLiteralOrCollectionType)
+      case DictType(kt, vt) =>
+        isLiteralOrCollectionType(kt) && isLiteralOrCollectionType(vt)
+      case _ => false
+    }
   }
 }
 
@@ -36,13 +50,13 @@ case class ListType(listType: Type) extends Type {
 case class ArrayType(arrayType: Type) extends Type {
   override def printType(): String = s"<Array[${arrayType.printType()}]>"
 }
+case class SetType(setType: Type) extends Type {
+  override def printType(): String = s"<Set[${setType.printType()}]>"
+}
 case class TupleType(tupleTypes: ArrayBuffer[Type]) extends Type {
   override def printType(): String = {
     s"<Tuple[${TypeUtil.printListType(tupleTypes)}]>"
   }
-}
-case class SetType(setType: Type) extends Type {
-  override def printType(): String = s"<Set[${setType.printType()}]>"
 }
 case class DictType(keyType: Type,
                     valueType: Type) extends Type {
