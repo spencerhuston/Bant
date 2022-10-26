@@ -140,7 +140,7 @@ object SemanticAnalyzer {
     LOG(DEBUG, s"evalLet: ${let.ident}")
     val letValue = typeCheck(let.expValue, env, let.letType)
     val body = typeCheck(let.afterLet, addName(env, let.ident, letValue.expType), expectedType)
-    Let(let.token, let.isLazy, let.ident, letValue.expType, let.expValue, body).usingType(body.expType)
+    Let(let.token, let.isLazy, let.ident, letValue.expType, letValue, body).usingType(body.expType)
   }
 
   def evalPrim(prim: Prim, env: Environment, expectedType: Type): Exp = {
