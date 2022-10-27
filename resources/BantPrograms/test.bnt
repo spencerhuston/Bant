@@ -1,2 +1,3 @@
-val a: Tuple[int, Tuple[char, string], char] = Tuple {1,Tuple{true,"hello"},'a'};
+val a: List[int] = List{ };
+val b = a;
 a

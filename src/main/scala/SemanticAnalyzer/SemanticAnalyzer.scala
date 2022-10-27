@@ -68,8 +68,6 @@ object SemanticAnalyzer {
         if (expressionType == UnknownType())
           reportTypeUnknown(token)
         typeWellFormed(expressionType)
-      case (_, UnknownType()) => typeWellFormed(expressionType)
-      case (UnknownType(), _) => typeWellFormed(expectedType)
       case (ListType(t1), ListType(t2)) => ListType(typeConforms(token, t1, t2, env))
       case (ArrayType(t1), ArrayType(t2)) => ArrayType(typeConforms(token, t1, t2, env))
       case (SetType(t1), SetType(t2)) => SetType(typeConforms(token, t1, t2, env))
@@ -86,6 +84,8 @@ object SemanticAnalyzer {
       case (t1, AdtType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
       case (FuncType(args1, rt1), FuncType(args2, rt2)) if args1.length == args2.length =>
         FuncType(listTypeConforms(args1, args2), typeConforms(token, rt1, rt2, env))
+      case (_, UnknownType()) => typeWellFormed(expressionType)
+      case (UnknownType(), _) => typeWellFormed(expectedType)
       case _ =>
         reportTypeMismatch(token, expressionType, expectedType)
         expressionType
@@ -200,47 +200,47 @@ object SemanticAnalyzer {
 
   def evalListDef(listDef: ListDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalListDef: ${listDef.token.tokenText}")
-    val listType = typeConforms(listDef.token, listDef.expType, expectedType, env)
-    val typedListValues = listDef.values.map(
-                            v => v.usingType(
-                              typeConforms(listDef.token, v.expType, listType.asInstanceOf[ListType].listType, env)
-                            ))
+    val typedListValues = listDef.values.map(eval(_, env, listDef.expType.asInstanceOf[ListType].listType))
+    val listExpType = if (typedListValues.isEmpty) UnknownType() else typedListValues.head.expType
+    val listType = typeConforms(listDef.token, ListType(listExpType), expectedType, env)
     ListDef(listDef.token, typedListValues).usingType(listType)
   }
 
   def evalArrayDef(arrayDef: ArrayDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalArrayDef: ${arrayDef.token.tokenText}")
-    val arrayType = typeConforms(arrayDef.token, arrayDef.expType, expectedType, env)
-    val typedArrayValues = arrayDef.values.map(
-                            v => v.usingType(
-                              typeConforms(arrayDef.token, v.expType, arrayType.asInstanceOf[ArrayType].arrayType, env)
-                            ))
+    val typedArrayValues = arrayDef.values.map(eval(_, env, arrayDef.expType.asInstanceOf[ArrayType].arrayType))
+    val arrayExpType = if (typedArrayValues.isEmpty) UnknownType() else typedArrayValues.head.expType
+    val arrayType = typeConforms(arrayDef.token, ArrayType(arrayExpType), expectedType, env)
     ArrayDef(arrayDef.token, typedArrayValues).usingType(arrayType)
   }
 
   def evalSetDef(setDef: SetDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalSetDef: ${setDef.token.tokenText}")
-    val setType = typeConforms(setDef.token, setDef.expType, expectedType, env)
-    val typedSetValues = setDef.values.map(
-                          v => v.usingType(
-                            typeConforms(setDef.token, v.expType, setType.asInstanceOf[SetType].setType, env)
-                          ))
+    val typedSetValues = setDef.values.map(eval(_, env, setDef.expType.asInstanceOf[SetType].setType))
+    val setExpType = if (typedSetValues.isEmpty) UnknownType() else typedSetValues.head.expType
+    val setType = typeConforms(setDef.token, ArrayType(setExpType), expectedType, env)
     SetDef(setDef.token, typedSetValues).usingType(setType)
   }
 
   def evalTupleDef(tupleDef: TupleDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalTupleDef: ${tupleDef.token.tokenText}")
-    val tupleType = typeConforms(tupleDef.token, tupleDef.expType, expectedType, env)
-    val valueTypes = tupleDef.values.map(_.expType).
-                      zip(tupleType.asInstanceOf[TupleType].tupleTypes).
-                      map(t => typeConforms(tupleDef.token, t._1, t._2, env))
-    val typedValues = tupleDef.values.zip(valueTypes).map(v => v._1.usingType(v._2))
+    val tupleType = typeConforms(tupleDef.token, tupleDef.expType, expectedType, env).asInstanceOf[TupleType]
+    val tupleTypes = tupleDef.values.map(_.expType).
+                            zip(tupleType.tupleTypes).
+                            map(t => typeConforms(tupleDef.token, t._1, t._2, env))
+    val typedValues = tupleDef.values.zip(tupleTypes).map(v => v._1.usingType(v._2))
     TupleDef(tupleDef.token, typedValues).usingType(tupleType)
   }
 
   def evalDictDef(dictDef: DictDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalDictDef: ${dictDef.token.tokenText}")
-    ???
+    val dictType = typeConforms(dictDef.token, dictDef.expType, expectedType, env).asInstanceOf[DictType]
+    val typedDictValues = dictDef.mapping.map(m =>
+                            Parser.Map(
+                              m.key.usingType(typeConforms(m.key.token, m.key.expType, dictType.keyType, env)),
+                              m.value.usingType(typeConforms(m.value.token, m.value.expType, dictType.valueType, env))
+                            ))
+    DictDef(dictDef.token, typedDictValues).usingType(dictType)
   }
 
   def reportNoSuchName(token: Token, name: String): Unit = {

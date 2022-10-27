@@ -6,7 +6,7 @@ import Lexer.Lexer.scan
 import Lexer.{Lexer, Token}
 import Logger.Level
 import Logger.Logger.{ERROR, LOG, LOG_HEADER, WARN, setLevel}
-import Logger.PrettyPrinter.{expTreeString, expTreeToString, printAST}
+import Logger.PrettyPrinter.printAST
 import Parser.Exp
 import Parser.Parser.parse
 import SemanticAnalyzer.SemanticAnalyzer.eval
@@ -40,15 +40,19 @@ object Main {
   def runParser(tokenStream: ArrayBuffer[Token]): Exp = {
     val untypedRootExp = parse(tokenStream)
     if (Parser.Parser.warnings > 0)
-      WARN(s"${Parser.Parser.warnings} warnings occurred")
+      WARN(s"${Parser.Parser.warnings} warning(s) occurred")
     if (Parser.Parser.numErrors > 0)
-      ERROR(s"${Parser.Parser.numErrors} errors occurred")
+      ERROR(s"${Parser.Parser.numErrors} error(s) occurred")
     LOG_HEADER("Untyped AST", printAST(untypedRootExp))
     untypedRootExp
   }
 
   def runSemanticAnalyzer(exp: Exp): Exp = {
     val typedRootExp = eval(exp)
+    if (SemanticAnalyzer.SemanticAnalyzer.warnings > 0)
+      WARN(s"${SemanticAnalyzer.SemanticAnalyzer.warnings} warning(s) occurred")
+    if (SemanticAnalyzer.SemanticAnalyzer.numErrors > 0)
+      ERROR(s"${SemanticAnalyzer.SemanticAnalyzer.numErrors} error(s) occurred")
     LOG_HEADER("Typed AST", printAST(typedRootExp))
     typedRootExp
   }
