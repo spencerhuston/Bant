@@ -1,3 +1,2 @@
-alias IntList = List[List[int]];
-val a: IntList = List{1};
+val a: Tuple[int, Tuple[char, string], char] = Tuple {1,Tuple{true,"hello"},'a'};
 a
