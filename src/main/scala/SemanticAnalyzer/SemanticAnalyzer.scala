@@ -5,7 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, logicTypes, looseC
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import Parser.{Alias, ArrayDef, Branch, DictDef, Exp, Let, ListDef, Lit, NoOp, Prim, Ref, SetDef, TupleDef}
+import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, Let, ListDef, Lit, Match, NoOp, Prim, Ref, SetDef, TupleDef}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -50,7 +50,7 @@ object SemanticAnalyzer {
       case SetType(st) => SetType(typeWellFormed(st))
       case TupleType(tts) => TupleType(tts.map(typeWellFormed))
       case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
-      case AdtType(_, _, _) => ??? // TODO
+      case AdtUseType(_, _, _) => ??? // TODO
       case FuncType(_, _) => ??? // TODO
       case UnknownType() =>
         reportTypeUnknown(token)
@@ -76,12 +76,12 @@ object SemanticAnalyzer {
       case (TupleType(lt1), TupleType(lt2)) if lt2.isEmpty => TupleType(listTypeConforms(lt1, lt2))
       case (DictType(t1, t2), DictType(t3, t4)) =>
         DictType(typeConforms(token, t1, t3, env), typeConforms(token, t2, t4, env))
-      case (AdtType(i1, g1, f1), AdtType(i2, g2, f2))
+      case (AdtUseType(i1, g1, f1), AdtUseType(i2, g2, f2))
         if (i1 == i2) && (g1.length == g2.length) && (f1.length == f2.length) &&
           f1.zip(f2).count(f => f._1 != f._2) == 0 =>
-        AdtType(i1, listTypeConforms(g1, g2), f1)
-      case (AdtType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
-      case (t1, AdtType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
+        AdtUseType(i1, g1, f1) // TODO: FOR ADT APP
+      case (AdtUseType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
+      case (t1, AdtUseType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
       case (FuncType(args1, rt1), FuncType(args2, rt2)) if args1.length == args2.length =>
         FuncType(listTypeConforms(args1, args2), typeConforms(token, rt1, rt2, env))
       case (_, UnknownType()) => typeWellFormed(expressionType)
@@ -150,7 +150,9 @@ object SemanticAnalyzer {
     LOG(DEBUG, s"eval: ${exp.token}")
     exp match {
       case Lit(_, _) => exp
+      case m@Match(_, _, _) => evalMatch(m, env, expectedType)
       case alias@Alias(_, _, _, _) => evalAlias(alias, env, expectedType)
+      case adt@Adt(_, _, _, _, _, _) => evalAdt(adt, env, expectedType)
       case let@Let(_, _, _, _, _, _) => evalLet(let, env, expectedType)
       case prim@Prim(_, _, _, _) => evalPrim(prim, env, expectedType)
       case ref@Ref(_, _) =>
@@ -168,10 +170,22 @@ object SemanticAnalyzer {
     }
   }
 
+  def evalMatch(m: Match, env: SemanticAnalyzer.Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalMatch: ${m.value.token.tokenText}")
+    val valueType = eval(m.value, env, UnknownType())
+    // TODO
+    ???
+  }
+
   def evalAlias(alias: Alias, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"addAlias: ${alias.toString}")
     val afterAlias = eval(alias.afterAlias, addAlias(env, alias.alias, alias.actualType), expectedType)
     Alias(alias.token, alias.alias, alias.actualType, afterAlias).usingType(afterAlias.expType)
+  }
+
+  def evalAdt(adt: Adt, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalAdt: ${adt.ident}")
+    ???
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {
@@ -183,7 +197,7 @@ object SemanticAnalyzer {
 
   def evalPrim(prim: Prim, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalPrim: ${prim.op.toString}")
-    val left = typeCheck(prim.left, env, UnknownType()) // TODO: FIX TYPE PASSED IN
+    val left = typeCheck(prim.left, env, UnknownType()) // TODO: FIX TYPE PASSED IN?
     val right = typeCheck(prim.right, env, left.expType)
     val opType = typesConformToOperator(prim.token, prim.op, left.expType, right.expType, env)
     val primType = typeConforms(prim.token, opType, expectedType, env)

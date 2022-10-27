@@ -1,6 +1,5 @@
 package SemanticAnalyzer
 
-import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 abstract class Type {
@@ -10,6 +9,10 @@ abstract class Type {
 object TypeUtil {
   def printListType(types: ArrayBuffer[Type]): String = {
     types.map(_.printType()).mkString(",")
+  }
+
+  def printGenerics(generics: ArrayBuffer[GenericType]): String = {
+    generics.map(_.ident).mkString(",")
   }
 
   def isLiteralOrCollectionType(t: Type): Boolean = {
@@ -66,11 +69,32 @@ case class DictType(keyType: Type,
 }
 
 // Fancy
-case class AdtType(ident: String,
-                   generics: ArrayBuffer[Type],
-                   fieldNames: ArrayBuffer[String]) extends Type {
+case class GenericType(ident: String)
+case class ConstructorType(memberTypes: ArrayBuffer[Type])
+case class AdtDefType(ident: String,
+                      generics: ArrayBuffer[GenericType],
+                      constructorTypes: ArrayBuffer[ConstructorType]) extends Type {
   override def printType(): String = {
-    s"<$ident[${TypeUtil.printListType(generics)}]" +
+    s"<typedef$ident[${TypeUtil.printGenerics(generics)}]" +
+      s"(${constructorTypes.map(c => c.memberTypes.map(_.printType()).mkString(",")).mkString("|")})>"
+  }
+}
+case class AdtUseType(ident: String,
+                      generics: ArrayBuffer[Type],
+                      constructorTypes: ArrayBuffer[String]) extends Type {
+  override def printType(): String = {
+    s"<type $ident[${TypeUtil.printListType(generics)}]" +
+      s"(${constructorTypes.mkString(",")})>"
+  }
+}
+case class RecordType(ident: String,
+                      superType: String,
+                      generics: ArrayBuffer[GenericType],
+                      fieldNames: ArrayBuffer[String]) extends Type {
+  override def printType(): String = {
+    s"<record $ident" +
+      (if (superType.isEmpty) "" else s"=> $superType") +
+      s"[${TypeUtil.printGenerics(generics)}]" +
       s"(${fieldNames.mkString(",")})>"
   }
 }

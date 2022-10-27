@@ -16,6 +16,11 @@ object Parser {
   var numErrors: Int = 0
   var warnings: Int = 0
 
+  var hitEof: Boolean = false
+  final case class EOFEncounteredException(private val message: String = "",
+                                           private val cause: Throwable = None.orNull)
+                                          extends Exception(message, cause)
+
   var dummyCount: Int = 0
   var anonCount: Int = 0
 
@@ -151,11 +156,17 @@ object Parser {
     } catch {
       case i: IndexOutOfBoundsException =>
         ERROR(s"Fatal Internal Error - IndexOutOfBoundsException: ${i.getMessage}")
+        numErrors += 1
         index = 0
         none
       case n: NoSuchElementException =>
         ERROR(s"Fatal Internal Error - NoSuchElementException: ${n.getMessage}")
+        numErrors += 1
         index = 0
+        none
+      case _: EOFEncounteredException =>
+        ERROR(s"Error: EOF encountered while parsing")
+        numErrors += 1
         none
     }
   }
@@ -810,7 +821,10 @@ object Parser {
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
       case EOF(_, _) =>
-        advance()
+        hitEof = true
+        if (hitEof) {
+          throw EOFEncounteredException()
+        }
         none
       case _ =>
         reportUnexpected(curr)
@@ -878,7 +892,7 @@ object Parser {
           argTypes += parseType
         matchRequired(RETURN_TYPE)
         FuncType(argTypes, parseType)
-      case Ident(ident, _) => // TODO: FIX FOR ADT TYPES
+      case Ident(ident, _) =>
         advance()
         val generics = ArrayBuffer[Type]()
         if (matchOptional(LEFT_BRACKET)) {
@@ -892,7 +906,7 @@ object Parser {
           while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
             fieldNames += matchIdent
         }
-        AdtType(ident, generics, fieldNames)
+        AdtUseType(ident, generics, fieldNames)
       case _ =>
         reportBadType(curr)
         advance()
