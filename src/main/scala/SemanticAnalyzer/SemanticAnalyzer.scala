@@ -13,10 +13,10 @@ object SemanticAnalyzer {
   var numErrors = 0
   var warnings = 0
 
-  case class Environment(map: Map[String, Type])
+  case class Environment(map: Map[String, Type], aliases: Map[String, Type])
 
   def addName(env: Environment, name: String, newType: Type): Environment = {
-    Environment(env.map + (name -> newType))
+    Environment(env.map + (name -> newType), env.aliases)
   }
 
   def getName(token: Token, env: Environment, name: String): Type = {
@@ -28,8 +28,35 @@ object SemanticAnalyzer {
     }
   }
 
+  def addAlias(env: Environment, name: String, newType: Type): Environment = {
+    Environment(env.map, env.aliases + (name -> newType))
+  }
+
+  def getAlias(token: Token, env: Environment, name: String): Type = {
+    env.aliases.get(name) match {
+      case s@Some(_) => s.value
+      case _ =>
+        reportNoSuchName(token, name)
+        UnknownType()
+    }
+  }
+
   def typeConforms(token: Token, expressionType: Type, expectedType: Type, env: Environment): Type = {
     LOG(DEBUG, s"typeConforms")
+
+    def typeWellFormed(t: Type): Type = t match {
+      case ListType(lt) => ListType(typeWellFormed(lt))
+      case ArrayType(at) => ArrayType(typeWellFormed(at))
+      case SetType(st) => SetType(typeWellFormed(st))
+      case TupleType(tts) => TupleType(tts.map(typeWellFormed))
+      case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
+      case AdtType(_, _, _) => ??? // TODO
+      case FuncType(_, _) => ??? // TODO
+      case UnknownType() =>
+        reportTypeUnknown(token)
+        t
+      case _ => t
+    }
 
     def listTypeConforms(list1: ArrayBuffer[Type], list2: ArrayBuffer[Type]): ArrayBuffer[Type] = {
       list1.zip(list2).map(t => typeConforms(token, t._1, t._2, env)).exists(t => t.isInstanceOf[UnknownType])
@@ -40,19 +67,22 @@ object SemanticAnalyzer {
       case (_, _) if expressionType == expectedType =>
         if (expressionType == UnknownType())
           reportTypeUnknown(token)
-        expressionType
-      case (_, UnknownType()) => expressionType // TODO: FIX FOR COLLECTIONS WITH UNKNOWN ELEMENT TYPES
-      case (UnknownType(), _) => expectedType
-      case (ListType(t1), ListType(t2)) if t1 == t2 => expressionType
-      case (ArrayType(t1), ArrayType(t2)) if t1 == t2 => expressionType
+        typeWellFormed(expressionType)
+      case (_, UnknownType()) => typeWellFormed(expressionType)
+      case (UnknownType(), _) => typeWellFormed(expectedType)
+      case (ListType(t1), ListType(t2)) => ListType(typeConforms(token, t1, t2, env))
+      case (ArrayType(t1), ArrayType(t2)) => ArrayType(typeConforms(token, t1, t2, env))
+      case (SetType(t1), SetType(t2)) => SetType(typeConforms(token, t1, t2, env))
       case (TupleType(lt1), TupleType(lt2)) if lt1.length == lt2.length =>
         TupleType(listTypeConforms(lt1, lt2))
-      case (SetType(t1), SetType(t2)) if t1 == t2 => expressionType
-      case (DictType(t1, t2), DictType(t3, t4)) if (t1 == t3) && (t2 == t4) => expressionType
+      case (DictType(t1, t2), DictType(t3, t4)) =>
+        DictType(typeConforms(token, t1, t3, env), typeConforms(token, t2, t4, env))
       case (AdtType(i1, g1, f1), AdtType(i2, g2, f2))
         if (i1 == i2) && (g1.length == g2.length) && (f1.length == f2.length) &&
           f1.zip(f2).count(f => f._1 != f._2) == 0 =>
         AdtType(i1, listTypeConforms(g1, g2), f1)
+      case (AdtType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
+      case (t1, AdtType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
       case (FuncType(args1, rt1), FuncType(args2, rt2)) if args1.length == args2.length =>
         FuncType(listTypeConforms(args1, args2), typeConforms(token, rt1, rt2, env))
       case _ =>
@@ -61,7 +91,7 @@ object SemanticAnalyzer {
     }
   }
 
-  def typeConformsOperator(token: Token, op: Delimiters.Value, left: Type, right: Type, env: Environment): Type = {
+  def typesConformToOperator(token: Token, op: Delimiters.Value, left: Type, right: Type, env: Environment): Type = {
     val primType = typeConforms(token, left, right, env)
     if (primType != UnknownType()) {
       def validOperands(operatorMatch: Type => Boolean): Boolean = {
@@ -112,14 +142,14 @@ object SemanticAnalyzer {
 
   def eval(rootExp: Exp): Exp = {
     LOG(DEBUG, s"eval: ${rootExp.token}")
-    eval(rootExp, Environment(Map[String, Type]()), UnknownType())
+    eval(rootExp, Environment(Map[String, Type](), Map[String, Type]()), UnknownType())
   }
 
   def eval(exp: Exp, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"eval: ${exp.token}")
     exp match {
       case Lit(_, _) => exp
-      case Alias(_, _, _, _) => ???
+      case alias@Alias(_, _, _, _) => evalAlias(alias, env, expectedType)
       case let@Let(_, _, _, _, _, _) => evalLet(let, env, expectedType)
       case prim@Prim(_, _, _, _) => evalPrim(prim, env, expectedType)
       case ref@Ref(_, _) =>
@@ -139,7 +169,7 @@ object SemanticAnalyzer {
 
   def evalAlias(alias: Alias, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"addAlias: ${alias.toString}")
-    ???
+    eval(alias.afterAlias, addAlias(env, alias.alias, alias.actualType), expectedType)
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {
@@ -151,9 +181,9 @@ object SemanticAnalyzer {
 
   def evalPrim(prim: Prim, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalPrim: ${prim.op.toString}")
-    val left = typeCheck(prim.left, env, UnknownType())
+    val left = typeCheck(prim.left, env, UnknownType()) // TODO: FIX TYPE PASSED IN
     val right = typeCheck(prim.right, env, left.expType)
-    val opType = typeConformsOperator(prim.token, prim.op, left.expType, right.expType, env)
+    val opType = typesConformToOperator(prim.token, prim.op, left.expType, right.expType, env)
     val primType = typeConforms(prim.token, opType, expectedType, env)
     Prim(prim.token, prim.op, left, right).usingType(primType)
   }
@@ -161,8 +191,8 @@ object SemanticAnalyzer {
   def evalBranch(branch: Branch, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalBranch: ${branch.token.tokenText}")
     val condition = typeCheck(branch.condition, env, BoolType())
-    val ifBranch = typeCheck(branch.ifBranch, env, expectedType)
-    val elseBranch = typeCheck(branch.elseBranch, env, ifBranch.expType)
+    val elseBranch = typeCheck(branch.elseBranch, env, expectedType)
+    val ifBranch = typeCheck(branch.ifBranch, env, elseBranch.expType)
     Branch(branch.token, condition, ifBranch, elseBranch).usingType(elseBranch.expType)
   }
 
@@ -186,14 +216,14 @@ object SemanticAnalyzer {
 
   def evalTupleDef(tupleDef: TupleDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalTupleDef: ${tupleDef.token.tokenText}")
-    val tupleType = typeConforms(tupleDef.token, tupleDef.expType, expectedType, env)
     // TODO
+    ???
   }
 
   def evalDictDef(dictDef: DictDef, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalDictDef: ${dictDef.token.tokenText}")
-    val dictType = typeConforms(dictDef.token, dictDef.expType, expectedType, env)
     // TODO
+    ???
   }
 
   def reportNoSuchName(token: Token, name: String): Unit = {

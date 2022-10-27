@@ -43,8 +43,7 @@ object Main {
       WARN(s"${Parser.Parser.warnings} warnings occurred")
     if (Parser.Parser.numErrors > 0)
       ERROR(s"${Parser.Parser.numErrors} errors occurred")
-    expTreeToString(untypedRootExp)
-    LOG_HEADER("Untyped AST", expTreeString)
+    LOG_HEADER("Untyped AST", printAST(untypedRootExp))
     untypedRootExp
   }
 

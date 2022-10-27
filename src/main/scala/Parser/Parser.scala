@@ -809,7 +809,9 @@ object Parser {
           advance()
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
-      case EOF(_, _) => none
+      case EOF(_, _) =>
+        advance()
+        none
       case _ =>
         reportUnexpected(curr)
         advance()

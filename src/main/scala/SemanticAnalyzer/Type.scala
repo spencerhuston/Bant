@@ -9,7 +9,7 @@ abstract class Type {
 
 object TypeUtil {
   def printListType(types: ArrayBuffer[Type]): String = {
-    types.tail.foldLeft(types.head.printType())(_ + "," + _.printType)
+    types.map(_.printType()).mkString(",")
   }
 
   def isLiteralOrCollectionType(t: Type): Boolean = {
@@ -71,7 +71,7 @@ case class AdtType(ident: String,
                    fieldNames: ArrayBuffer[String]) extends Type {
   override def printType(): String = {
     s"<$ident[${TypeUtil.printListType(generics)}]" +
-      s"(${fieldNames.tail.foldLeft(fieldNames.head)(_ + "," + _)})>"
+      s"(${fieldNames.mkString(",")})>"
   }
 }
 case class FuncType(argTypes: ArrayBuffer[Type],

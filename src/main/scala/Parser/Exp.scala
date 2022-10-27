@@ -103,8 +103,6 @@ case class FuncApp(token: Token,
                    ident: Exp,
                    genericParameters: ArrayBuffer[Type],
                    arguments: ArrayBuffer[Exp]) extends Exp
-case class Bird(token: Token,
-                apps: ArrayBuffer[FuncApp]) extends Exp
 case class TupleAccess(token: Token,
                        ref: Exp,
                        accessIndex: IntVal) extends Exp

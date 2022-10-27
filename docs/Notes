@@ -1,3 +1,7 @@
+Current Bugs:
+- Empty collection on left-side of primitive throws error even if rigth-side and expectedType are known
+- Bad error reporting on primitve type-mismatch
+
 TODO:
 - More type-tagging during parsing phase
 - Bird operator
