@@ -687,28 +687,32 @@ object Parser {
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        ListDef(token, values)
+        val listType = ListType(if (values.isEmpty) UnknownType() else values.head.expType)
+        ListDef(token, values).usingType(listType)
       case Keyword(ARRAY, _, _) =>
         advance()
         matchRequired(LEFT_BRACE)
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        ArrayDef(token, values)
+        val arrayType = ArrayType(if (values.isEmpty) UnknownType() else values.head.expType)
+        ArrayDef(token, values).usingType(arrayType)
       case Keyword(SET, _, _) =>
         advance()
         matchRequired(LEFT_BRACE)
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        SetDef(token, values)
+        val setType = SetType(if (values.isEmpty) UnknownType() else values.head.expType)
+        SetDef(token, values).usingType(setType)
       case Keyword(TUPLE, _, _) =>
         advance()
         matchRequired(LEFT_BRACE)
         val values = ArrayBuffer[Exp]()
         while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE))
           values += parseSimpleExp
-        TupleDef(token, values)
+        val tupleType = TupleType(values.map(v => v.expType))
+        TupleDef(token, values).usingType(tupleType)
       case Keyword(DICT, _, _) =>
         advance()
         matchRequired(LEFT_BRACE)
@@ -719,7 +723,13 @@ object Parser {
           val value = parseSimpleExp
           mapping += Map(key, value)
         }
-        DictDef(token, mapping)
+        val dictType: DictType = {
+          if (mapping.isEmpty)
+            DictType(UnknownType(), UnknownType())
+          else
+            DictType(mapping.head.key.expType, mapping.head.value.expType)
+        }
+        DictDef(token, mapping).usingType(dictType)
       case _ =>
         reportUnexpected(curr)
         none

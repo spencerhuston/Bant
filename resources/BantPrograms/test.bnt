@@ -1,4 +1,2 @@
-val a = 5;
-val b = 2 + a;
-val c: bool = a + b - 3 == 11;
-c
+val a: List[bool] = List {1};
+a

@@ -5,7 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, logicTypes, looseC
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import Parser.{Alias, Exp, Let, ListDef, Lit, NoOp, Prim, Ref}
+import Parser.{Alias, ArrayDef, Branch, DictDef, Exp, Let, ListDef, Lit, NoOp, Prim, Ref, SetDef, TupleDef}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -41,7 +41,7 @@ object SemanticAnalyzer {
         if (expressionType == UnknownType())
           reportTypeUnknown(token)
         expressionType
-      case (_, UnknownType()) => expressionType
+      case (_, UnknownType()) => expressionType // TODO: FIX FOR COLLECTIONS WITH UNKNOWN ELEMENT TYPES
       case (UnknownType(), _) => expectedType
       case (ListType(t1), ListType(t2)) if t1 == t2 => expressionType
       case (ArrayType(t1), ArrayType(t2)) if t1 == t2 => expressionType
@@ -124,6 +124,12 @@ object SemanticAnalyzer {
       case prim@Prim(_, _, _, _) => evalPrim(prim, env, expectedType)
       case ref@Ref(_, _) =>
         ref.usingType(typeConforms(ref.token, getName(ref.token, env, ref.ident), expectedType, env))
+      case branch@Branch(_, _, _, _) => evalBranch(branch, env, expectedType)
+      case list@ListDef(_, _) => evalListDef(list, env, expectedType)
+      case array@ArrayDef(_, _) => evalArrayDef(array, env, expectedType)
+      case set@SetDef(_, _) => evalSetDef(set, env, expectedType)
+      case tuple@TupleDef(_, _) => evalTupleDef(tuple, env, expectedType)
+      case dict@DictDef(_, _) => evalDictDef(dict, env, expectedType)
       case NoOp(_) => exp
       case _ =>
         reportUnexpected(exp.token)
@@ -150,6 +156,44 @@ object SemanticAnalyzer {
     val opType = typeConformsOperator(prim.token, prim.op, left.expType, right.expType, env)
     val primType = typeConforms(prim.token, opType, expectedType, env)
     Prim(prim.token, prim.op, left, right).usingType(primType)
+  }
+
+  def evalBranch(branch: Branch, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalBranch: ${branch.token.tokenText}")
+    val condition = typeCheck(branch.condition, env, BoolType())
+    val ifBranch = typeCheck(branch.ifBranch, env, expectedType)
+    val elseBranch = typeCheck(branch.elseBranch, env, ifBranch.expType)
+    Branch(branch.token, condition, ifBranch, elseBranch).usingType(elseBranch.expType)
+  }
+
+  def evalListDef(listDef: ListDef, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalListDef: ${listDef.token.tokenText}")
+    val listType = typeConforms(listDef.token, listDef.expType, expectedType, env)
+    ListDef(listDef.token, listDef.values).usingType(listType)
+  }
+
+  def evalArrayDef(arrayDef: ArrayDef, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalArrayDef: ${arrayDef.token.tokenText}")
+    val arrayType = typeConforms(arrayDef.token, arrayDef.expType, expectedType, env)
+    ArrayDef(arrayDef.token, arrayDef.values).usingType(arrayType)
+  }
+
+  def evalSetDef(setDef: SetDef, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalSetDef: ${setDef.token.tokenText}")
+    val setType = typeConforms(setDef.token, setDef.expType, expectedType, env)
+    SetDef(setDef.token, setDef.values).usingType(setType)
+  }
+
+  def evalTupleDef(tupleDef: TupleDef, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalTupleDef: ${tupleDef.token.tokenText}")
+    val tupleType = typeConforms(tupleDef.token, tupleDef.expType, expectedType, env)
+    // TODO
+  }
+
+  def evalDictDef(dictDef: DictDef, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalDictDef: ${dictDef.token.tokenText}")
+    val dictType = typeConforms(dictDef.token, dictDef.expType, expectedType, env)
+    // TODO
   }
 
   def reportNoSuchName(token: Token, name: String): Unit = {
