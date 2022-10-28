@@ -99,6 +99,10 @@ case class FuncDef(token: Token,
                    body: Exp) extends Exp
 
 // Function Application/Data & Record Construction/Collection Access/
+// FuncApp covers:
+// - Function Application
+// - ADT Construction
+// - Collection Access
 case class FuncApp(token: Token,
                    ident: Exp,
                    genericParameters: ArrayBuffer[Type],

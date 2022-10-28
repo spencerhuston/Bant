@@ -12,7 +12,7 @@ object TypeUtil {
   }
 
   def printGenerics(generics: ArrayBuffer[GenericType]): String = {
-    generics.map(_.ident).mkString(",")
+    generics.map(g => g.ident + s":> ${g.lowerBound}" + s"<: ${g.upperBound}").mkString(",")
   }
 
   def isLiteralOrCollectionType(t: Type): Boolean = {
@@ -69,7 +69,7 @@ case class DictType(keyType: Type,
 }
 
 // Fancy
-case class GenericType(ident: String)
+case class GenericType(ident: String, lowerBound: String, upperBound: String)
 case class ConstructorType(memberTypes: ArrayBuffer[Type])
 case class AdtDefType(ident: String,
                       generics: ArrayBuffer[GenericType],

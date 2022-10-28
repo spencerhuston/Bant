@@ -185,6 +185,17 @@ object SemanticAnalyzer {
 
   def evalAdt(adt: Adt, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalAdt: ${adt.ident}")
+    val adtEnv = addName(env, adt.ident, UnknownType())
+    // 1. For each generic check ident does not exist in env
+    // 1.a If it doesn't its a generic placeholder name, put as GenericType in env
+    // 1.b If it does it's another ADT or a Record or self-reference
+    // 1.b.a If it's an ADT make sure it doesn't have lower and upper bounds
+    // 1.b.b If it's a Record check: it is not sealed if there is a lower type, and upper type is not sealed
+    // 1.b.c If its a self-reference, follow ADT rules
+    // 2. Convert generics to generic types, making sure of all checks
+    // 3. Re-add self-type into env with generics added
+    // 4. Convert each constructor to a constructor type
+    // 5. For any ADT or Record references, ensure generics match correctly (pull from env)
     ???
   }
 

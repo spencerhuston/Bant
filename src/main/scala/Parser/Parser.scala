@@ -16,7 +16,7 @@ object Parser {
   var numErrors: Int = 0
   var warnings: Int = 0
 
-  var hitEof: Boolean = false
+  var eofHitNum: Int = 0
   final case class EOFEncounteredException(private val message: String = "",
                                            private val cause: Throwable = None.orNull)
                                           extends Exception(message, cause)
@@ -821,8 +821,8 @@ object Parser {
           Lit(curr, IntVal(tokenText.toInt)).usingType(IntType())
         }
       case EOF(_, _) =>
-        hitEof = true
-        if (hitEof) {
+        eofHitNum += 1
+        if (eofHitNum > 1) {
           throw EOFEncounteredException()
         }
         none
