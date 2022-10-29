@@ -72,7 +72,7 @@ case class Signature(name: Ref, funcType: Type)
 case class Typeclass(token: Token,
                      isSealed: Boolean,
                      ident: String,
-                     genericTypes: ArrayBuffer[Generic],
+                     generics: ArrayBuffer[Generic],
                      superclass: Ref,
                      signatures: ArrayBuffer[Signature],
                      afterTypeclass: Exp) extends Exp

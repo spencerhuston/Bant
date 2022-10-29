@@ -88,6 +88,7 @@ case class AdtUseType(ident: String,
   }
 }
 case class RecordType(ident: String,
+                      isSealed: Boolean,
                       superType: String,
                       generics: ArrayBuffer[GenericType],
                       fieldNames: ArrayBuffer[String]) extends Type {
@@ -98,7 +99,8 @@ case class RecordType(ident: String,
       s"(${fieldNames.mkString(",")})>"
   }
 }
-case class FuncType(argTypes: ArrayBuffer[Type],
+case class FuncType(generics: ArrayBuffer[GenericType],
+                    argTypes: ArrayBuffer[Type],
                     returnType: Type) extends Type {
   override def printType(): String = {
     s"<Func(${TypeUtil.printListType(argTypes)}) -> $returnType>"

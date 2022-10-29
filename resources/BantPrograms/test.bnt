@@ -1,3 +1,3 @@
-type Test[T :> U <: V] {
-    int -> char | bool
+type Test {
+    int, char | bool
 };

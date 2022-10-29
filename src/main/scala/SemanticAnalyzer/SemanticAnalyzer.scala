@@ -5,7 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, logicTypes, looseC
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, Let, ListDef, Lit, Match, NoOp, Prim, Ref, SetDef, TupleDef}
+import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncDef, Generic, Let, ListDef, Lit, Match, NoOp, Prim, Record, Ref, SetDef, TupleDef, Typeclass}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -141,6 +141,75 @@ object SemanticAnalyzer {
     evaluatedExp.usingType(expType)
   }
 
+  def typeCheckGenericParams(exp: Exp, env: Environment): ArrayBuffer[GenericType] = {
+    val generics: ArrayBuffer[Generic] = exp match {
+      case a@Adt(_, _, _, _, _, _) => a.generics
+      case r@Record(_, _, _, _, _, _, _, _) => r.generics
+      case t@Typeclass(_, _, _, _, _, _, _) => t.generics
+      case f@FuncDef(_, _, _, _, _, _) => f.generics
+      case _ =>
+        ERROR(s"Error: Type does not allow generics")
+        reportLine(exp.token)
+        ArrayBuffer[Generic]()
+    }
+
+    def genericToType(g: Generic): GenericType = GenericType(g.ident, g.lowerBound, g.upperBound)
+
+    def checkBounds(g: Generic): Unit = {
+      def reportNotRecordType(bound: String): Unit = {
+        ERROR(s"Error: Bound $bound is not a <record> type")
+        reportLine(exp.token)
+      }
+
+      env.map.get(g.lowerBound) match {
+        case Some(lower) =>
+          if (!lower.isInstanceOf[RecordType])
+            reportNotRecordType(g.lowerBound)
+        case _ =>
+      }
+      env.map.get(g.upperBound) match {
+        case Some(upper) =>
+          if (!upper.isInstanceOf[RecordType])
+            reportNotRecordType(g.upperBound)
+          else if (upper.asInstanceOf[RecordType].isSealed) {
+            ERROR(s"Error: <record> ${g.upperBound} is sealed, cannot have a lower-bound")
+            reportLine(exp.token)
+          }
+        case _ =>
+      }
+    }
+
+    // 1. For each generic check if the ident exists in env*
+    // 1.a If it doesn't its a generic placeholder name, put as GenericType in env*
+    // 1.b If it does it's another ADT or a Record or self-reference
+    // 1.b.a If it's an ADT make sure it doesn't have lower and upper bounds
+    // 1.b.b If it's a Record check: it is not sealed if there is a lower type, and upper type is not sealed
+    // 1.b.c If its a self-reference, follow ADT rules
+    // 2. Convert generics to generic types, making sure of all checks
+    // 3. Re-add self-type into env with generics added
+    generics.map(g => env.map.get(g.ident) match { // 1.
+      case Some(typeVal) => // 1.b
+        typeVal match {
+          case AdtDefType(_, _, _) =>
+            if (g.lowerBound.nonEmpty || g.upperBound.nonEmpty) { // 1.b.a
+              ERROR(s"Error: <type> $g can not be type-bound")
+              reportLine(exp.token)
+            }
+            genericToType(g)
+          case RecordType(recordIdent, isSealed, _, _, _) => // 1.b.b
+            if (isSealed && g.lowerBound.nonEmpty) {
+              ERROR(s"Error: <record> $recordIdent is sealed, cannot have a lower-bound")
+              reportLine(exp.token)
+            }
+            checkBounds(g)
+            genericToType(g)
+        }
+      case _ => // 1.a
+        checkBounds(g)
+        genericToType(g)
+    })
+  }
+
   def eval(rootExp: Exp): Exp = {
     LOG(DEBUG, s"eval: ${rootExp.token}")
     eval(rootExp, Environment(Map[String, Type](), Map[String, Type]()), UnknownType())
@@ -185,18 +254,31 @@ object SemanticAnalyzer {
 
   def evalAdt(adt: Adt, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalAdt: ${adt.ident}")
-    val adtEnv = addName(env, adt.ident, UnknownType())
-    // 1. For each generic check ident does not exist in env
-    // 1.a If it doesn't its a generic placeholder name, put as GenericType in env
-    // 1.b If it does it's another ADT or a Record or self-reference
-    // 1.b.a If it's an ADT make sure it doesn't have lower and upper bounds
-    // 1.b.b If it's a Record check: it is not sealed if there is a lower type, and upper type is not sealed
-    // 1.b.c If its a self-reference, follow ADT rules
-    // 2. Convert generics to generic types, making sure of all checks
-    // 3. Re-add self-type into env with generics added
-    // 4. Convert each constructor to a constructor type
-    // 5. For any ADT or Record references, ensure generics match correctly (pull from env)
-    ???
+    val adtEnvNoGenerics = addName(env, adt.ident, UnknownType())
+    // 1. Convert each constructor to a constructor type
+    // 2. For any ADT, Record, or FuncType references, ensure generics match correctly (pull from env)
+    val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(adt, adtEnvNoGenerics)
+    val adtEnv = addName(adtEnvNoGenerics, adt.ident, AdtDefType(adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
+    val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(c => ConstructorType(c.members))
+    constructorTypes.foreach(_.memberTypes.foreach {
+      case a@AdtDefType(_, _, _) =>
+      case r@RecordType(_, _, _, _, _) =>
+      case _ =>
+        ERROR(s"Error: Type cannot be specified with generics in <type> constructor")
+        reportLine(adt.token)
+    })
+    val afterAdt = eval(adt.afterAdt, addName(env, adt.ident, AdtDefType(adt.ident, genericTypes, constructorTypes)), expectedType)
+    env.map.get(adt.derivedFrom.ident) match {
+      case Some(ident) =>
+        if (???) { // need TypeclassDef
+          ERROR(s"Error: Cannot derive from non-<typeclass> ${adt.derivedFrom.ident}")
+          reportLine(adt.token)
+        }
+      case _ =>
+        ERROR(s"Error: <typeclass> ${adt.derivedFrom.ident} does not exist in this scope")
+        reportLine(adt.token)
+    }
+    Adt(adt.token, adt.ident, genericTypes, )
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {
