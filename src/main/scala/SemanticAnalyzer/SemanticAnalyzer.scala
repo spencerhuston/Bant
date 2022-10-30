@@ -1,7 +1,7 @@
 package SemanticAnalyzer
 
 import Lexer.SyntaxDefinitions.Delimiters
-import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, logicTypes, looseComparisonTypes, plusTypes, strictComparisonTypes}
+import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, getValue, logicTypes, looseComparisonTypes, plusTypes, strictComparisonTypes}
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
@@ -238,7 +238,7 @@ object SemanticAnalyzer {
 
   def eval(rootExp: Exp): Exp = {
     LOG(DEBUG, s"eval: ${rootExp.token}")
-    eval(rootExp, Environment(Map[String, Type](), Map[String, Type](), Map[String, Type]), UnknownType())
+    eval(rootExp, Environment(Map[String, Type](), Map[String, Type](), Map[String, Type]()), UnknownType())
   }
 
   def eval(exp: Exp, env: Environment, expectedType: Type): Exp = {
@@ -281,22 +281,61 @@ object SemanticAnalyzer {
   def evalAdt(adt: Adt, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalAdt: ${adt.ident}")
     val adtEnvNoGenerics = addName(env, adt.ident, UnknownType())
+    checkDerivable(adt.token, adt.derivedFrom.ident, env)
     // 1. Convert each constructor to a constructor type
     // 2. For any ADT, Record, or FuncType references, ensure generics match correctly (pull from env)
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(adt, adtEnvNoGenerics)
     val adtEnv = addName(adtEnvNoGenerics, adt.ident, AdtType(adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
-    val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(c =>
-      ConstructorType(c.members)
+    val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(ct =>
+      ConstructorType(ct.members.map {
+        case unknown@UnknownRefType(i, g, f) =>
+          if (f.nonEmpty) {
+            ERROR(s"Error: Cannot deconstruct type in <type> definition")
+            reportLine(adt.token)
+            unknown
+          }
+          else if (!g.forall(_.isInstanceOf[UnknownRefType])) {
+            ERROR(s"Error: Literal types disallowed in generic type parameters")
+            reportLine(adt.token)
+            unknown
+          }
+          else {
+            adtEnv.map.get(i) match {
+              case Some(ref) =>
+                ref match {
+                  case unknownAdt@AdtType(_, adtG, _) =>
+                    if (g.length == adtG.length) {
+                      ???
+                      unknownAdt
+                    }
+                    else
+                      unknown
+                  case unknownRecord@RecordType(_, _, _, recordG, _) =>
+                    if (g.length == recordG.length) {
+                      ???
+                      unknownRecord
+                    }
+                    else
+                      unknown
+                  case _ =>
+                    ERROR(s"Error: Invalid reference to type $i")
+                    reportLine(adt.token)
+                    unknown
+                }
+              case _ =>
+                genericTypes.find(g => g.ident == i) match {
+                  case Some(generic) => generic
+                  case _ =>
+                    ERROR(s"Error: Generic parameter $i not defined")
+                    reportLine(adt.token)
+                    unknown
+                }
+            }
+          }
+        case mt: Type => mt
+      })
     )
-    /*constructorTypes.foreach(_.memberTypes.foreach {
-      case a@AdtType(_, _, _) =>
-      case r@RecordType(_, _, _, _, _) =>
-      case _ =>
-        ERROR(s"Error: Type cannot be specified with generics in <type> constructor")
-        reportLine(adt.token)
-    })*/
     val adtType = AdtType(adt.ident, genericTypes, constructorTypes)
-    checkDerivable(adt.token, adt.derivedFrom.ident, env)
     val afterAdt = eval(adt.afterAdt, addName(env, adt.ident, adtType), expectedType)
     Adt(adt.token, adt.ident, adt.generics, adt.derivedFrom, adt.constructors, afterAdt).usingType(adtType)
   }

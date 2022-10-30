@@ -1,4 +1,5 @@
-type None[T :> U <: V, U] { };
-type Node[T] {
-    Node[T], Node[T] | None
+type None { };
+type Some[T] { T };
+type Option[T] {
+    Some | None
 };

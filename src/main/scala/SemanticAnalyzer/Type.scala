@@ -69,9 +69,9 @@ case class UnknownRefType(ident: String,
                           generics: ArrayBuffer[Type],
                           fieldNames: ArrayBuffer[String]) extends Type {
   override def printType(): String = {
-    s"<ref $ident" +
-      s"[${TypeUtil.printListType(generics)}]" +
-      s"(${fieldNames.mkString(",")})>"
+    s"<ref? $ident" +
+      (if (generics.nonEmpty) s"[${TypeUtil.printListType(generics)}]" else "") +
+      (if (fieldNames.nonEmpty) s"(${fieldNames.mkString(",")})>" else ">")
   }
 }
 case class GenericType(ident: String, lowerBound: String, upperBound: String) extends Type {
@@ -112,7 +112,7 @@ case class RecordType(ident: String,
 case class FuncType(argTypes: ArrayBuffer[Type],
                     returnType: Type) extends Type {
   override def printType(): String = {
-    s"<Func(${TypeUtil.printListType(argTypes)}) -> $returnType>"
+    s"<func(${TypeUtil.printListType(argTypes)}) -> $returnType>"
   }
 }
 
