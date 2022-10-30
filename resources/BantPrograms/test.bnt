@@ -1,5 +1,5 @@
 type None { };
-type Some[T] { T };
+type Some[T, U] { T };
 type Option[T] {
-    Some | None
+    Some[T[U], U] | None
 };

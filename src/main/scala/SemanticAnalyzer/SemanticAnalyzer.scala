@@ -230,7 +230,7 @@ object SemanticAnalyzer {
       env.typeclasses.get(typeclassIdent) match {
         case Some(_) =>
         case _ =>
-          ERROR(s"Error: <typeclass> ${typeclassIdent} does not exist in this scope")
+          ERROR(s"Error: <typeclass> $typeclassIdent does not exist in this scope")
           reportLine(token)
       }
     }
@@ -294,31 +294,30 @@ object SemanticAnalyzer {
             reportLine(adt.token)
             unknown
           }
-          else if (!g.forall(_.isInstanceOf[UnknownRefType])) {
-            ERROR(s"Error: Literal types disallowed in generic type parameters")
-            reportLine(adt.token)
-            unknown
-          }
+          // check all generics in g are unknownRefTypes, nested completely down.
+          // check all unknownRefTypes that arent refs from env are found in genericTypes
           else {
             adtEnv.map.get(i) match {
               case Some(ref) =>
                 ref match {
-                  case unknownAdt@AdtType(_, adtG, _) =>
-                    if (g.length == adtG.length) {
-                      ???
-                      unknownAdt
-                    }
-                    else
+                  case knownAdt@AdtType(_, adtG, _) =>
+                    if (g.length == adtG.length)
+                      knownAdt
+                    else {
+                      ERROR(s"Error: Generic parameters for <type> $i do not match reference")
+                      reportLine(adt.token)
                       unknown
-                  case unknownRecord@RecordType(_, _, _, recordG, _) =>
-                    if (g.length == recordG.length) {
-                      ???
-                      unknownRecord
                     }
-                    else
+                  case knownRecord@RecordType(_, _, _, recordG, _) =>
+                    if (g.length == recordG.length)
+                      knownRecord
+                    else {
+                      ERROR(s"Error: Generic parameters for <record> $i do not match reference")
+                      reportLine(adt.token)
                       unknown
+                    }
                   case _ =>
-                    ERROR(s"Error: Invalid reference to type $i")
+                    ERROR(s"Error: Invalid reference to type \"$i\"")
                     reportLine(adt.token)
                     unknown
                 }
@@ -326,7 +325,7 @@ object SemanticAnalyzer {
                 genericTypes.find(g => g.ident == i) match {
                   case Some(generic) => generic
                   case _ =>
-                    ERROR(s"Error: Generic parameter $i not defined")
+                    ERROR(s"Error: Generic parameter \"$i\" not defined")
                     reportLine(adt.token)
                     unknown
                 }
