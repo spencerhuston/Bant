@@ -14,7 +14,6 @@ Other Notes:
 - :> and <: for bounded types only
 - Sets in Collection Types
 - Lazy Evaluation (need to figure out lazy parameters)
-- Polymorhpic parameter as a part of type syntax
 - Polymorphic inference, ex: print[int](5) to print(5). [] is omitted due to inference of parameter type
 
 # Bounding polymorhpic type T to Vehicle subclasses

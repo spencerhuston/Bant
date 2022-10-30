@@ -11,10 +11,6 @@ object TypeUtil {
     types.map(_.printType()).mkString(",")
   }
 
-  def printGenerics(generics: ArrayBuffer[GenericType]): String = {
-    generics.map(g => g.ident + s":> ${g.lowerBound}" + s"<: ${g.upperBound}").mkString(",")
-  }
-
   def isLiteralOrCollectionType(t: Type): Boolean = {
     t match {
       case IntType() | BoolType() | CharType() | StringType() | NullType() => true
@@ -69,22 +65,36 @@ case class DictType(keyType: Type,
 }
 
 // Fancy
-case class GenericType(ident: String, lowerBound: String, upperBound: String)
-case class ConstructorType(memberTypes: ArrayBuffer[Type])
-case class AdtDefType(ident: String,
-                      generics: ArrayBuffer[GenericType],
-                      constructorTypes: ArrayBuffer[ConstructorType]) extends Type {
+case class UnknownRefType(ident: String,
+                          generics: ArrayBuffer[Type],
+                          fieldNames: ArrayBuffer[String]) extends Type {
   override def printType(): String = {
-    s"<typedef$ident[${TypeUtil.printGenerics(generics)}]" +
-      s"(${constructorTypes.map(c => c.memberTypes.map(_.printType()).mkString(",")).mkString("|")})>"
+    s"<ref $ident" +
+      s"[${TypeUtil.printListType(generics)}]" +
+      s"(${fieldNames.mkString(",")})>"
   }
 }
-case class AdtUseType(ident: String,
-                      generics: ArrayBuffer[Type],
-                      constructorTypes: ArrayBuffer[String]) extends Type {
+case class GenericType(ident: String, lowerBound: String, upperBound: String) extends Type {
   override def printType(): String = {
-    s"<type $ident[${TypeUtil.printListType(generics)}]" +
-      s"(${constructorTypes.mkString(",")})>"
+    ident +
+      (if (lowerBound.nonEmpty) s" :> $lowerBound" else "") +
+      (if (upperBound.nonEmpty) s" <: $upperBound" else "")
+  }
+}
+case class ConstructorType(memberTypes: ArrayBuffer[Type])
+case class AdtType(ident: String,
+                   generics: ArrayBuffer[GenericType],
+                   constructorTypes: ArrayBuffer[ConstructorType]) extends Type {
+  override def printType(): String = {
+    s"<type $ident" +
+      (if (generics.nonEmpty) s"[${generics.map(_.printType()).mkString(",")}]" else "") +
+      (if (constructorTypes.nonEmpty)
+        s"(${constructorTypes.map(c =>
+          c.memberTypes.map(_.printType())
+            .mkString(","))
+          .mkString("|")})"
+      else "") + ">"
+
   }
 }
 case class RecordType(ident: String,
@@ -95,12 +105,11 @@ case class RecordType(ident: String,
   override def printType(): String = {
     s"<record $ident" +
       (if (superType.isEmpty) "" else s"=> $superType") +
-      s"[${TypeUtil.printGenerics(generics)}]" +
+      s"[${generics.map(_.printType()).mkString(",")}]" +
       s"(${fieldNames.mkString(",")})>"
   }
 }
-case class FuncType(generics: ArrayBuffer[GenericType],
-                    argTypes: ArrayBuffer[Type],
+case class FuncType(argTypes: ArrayBuffer[Type],
                     returnType: Type) extends Type {
   override def printType(): String = {
     s"<Func(${TypeUtil.printListType(argTypes)}) -> $returnType>"

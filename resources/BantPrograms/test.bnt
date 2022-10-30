@@ -1,3 +1,4 @@
-type Test {
-    int, char | bool
+type None[T :> U <: V, U] { };
+type Node[T] {
+    Node[T], Node[T] | None
 };

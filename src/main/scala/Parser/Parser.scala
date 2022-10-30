@@ -906,7 +906,7 @@ object Parser {
           while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
             fieldNames += matchIdent
         }
-        AdtUseType(ident, generics, fieldNames)
+        UnknownRefType(ident, generics, fieldNames)
       case _ =>
         reportBadType(curr)
         advance()

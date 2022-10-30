@@ -13,10 +13,12 @@ object SemanticAnalyzer {
   var numErrors = 0
   var warnings = 0
 
-  case class Environment(map: Map[String, Type], aliases: Map[String, Type])
+  case class Environment(map: Map[String, Type],
+                         aliases: Map[String, Type],
+                         typeclasses: Map[String, Type])
 
   def addName(env: Environment, name: String, newType: Type): Environment = {
-    Environment(env.map + (name -> newType), env.aliases)
+    Environment(env.map + (name -> newType), env.aliases, env.typeclasses)
   }
 
   def getName(token: Token, env: Environment, name: String): Type = {
@@ -29,10 +31,23 @@ object SemanticAnalyzer {
   }
 
   def addAlias(env: Environment, name: String, newType: Type): Environment = {
-    Environment(env.map, env.aliases + (name -> newType))
+    Environment(env.map, env.aliases + (name -> newType), env.typeclasses)
   }
 
   def getAlias(token: Token, env: Environment, name: String): Type = {
+    env.aliases.get(name) match {
+      case s@Some(_) => s.value
+      case _ =>
+        reportNoSuchName(token, name)
+        UnknownType()
+    }
+  }
+
+  def addTypeclass(env: Environment, name: String, newType: Type): Environment = {
+    Environment(env.map, env.aliases, env.typeclasses + (name -> newType))
+  }
+
+  def getTypeclass(token: Token, env: Environment, name: String): Type = {
     env.aliases.get(name) match {
       case s@Some(_) => s.value
       case _ =>
@@ -50,7 +65,7 @@ object SemanticAnalyzer {
       case SetType(st) => SetType(typeWellFormed(st))
       case TupleType(tts) => TupleType(tts.map(typeWellFormed))
       case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
-      case AdtUseType(_, _, _) => ??? // TODO
+      case AdtType(_, _, _) => ??? // TODO: Could be ADT or Record
       case FuncType(_, _) => ??? // TODO
       case UnknownType() =>
         reportTypeUnknown(token)
@@ -76,12 +91,12 @@ object SemanticAnalyzer {
       case (TupleType(lt1), TupleType(lt2)) if lt2.isEmpty => TupleType(listTypeConforms(lt1, lt2))
       case (DictType(t1, t2), DictType(t3, t4)) =>
         DictType(typeConforms(token, t1, t3, env), typeConforms(token, t2, t4, env))
-      case (AdtUseType(i1, g1, f1), AdtUseType(i2, g2, f2))
+      case (AdtType(i1, g1, f1), AdtType(i2, g2, f2))
         if (i1 == i2) && (g1.length == g2.length) && (f1.length == f2.length) &&
           f1.zip(f2).count(f => f._1 != f._2) == 0 =>
-        AdtUseType(i1, g1, f1) // TODO: FOR ADT APP
-      case (AdtUseType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
-      case (t1, AdtUseType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
+        AdtType(i1, g1, f1) // TODO: FOR ADT APP
+      case (AdtType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
+      case (t1, AdtType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
       case (FuncType(args1, rt1), FuncType(args2, rt2)) if args1.length == args2.length =>
         FuncType(listTypeConforms(args1, args2), typeConforms(token, rt1, rt2, env))
       case (_, UnknownType()) => typeWellFormed(expressionType)
@@ -150,7 +165,7 @@ object SemanticAnalyzer {
       case _ =>
         ERROR(s"Error: Type does not allow generics")
         reportLine(exp.token)
-        ArrayBuffer[Generic]()
+        return ArrayBuffer[GenericType]()
     }
 
     def genericToType(g: Generic): GenericType = GenericType(g.ident, g.lowerBound, g.upperBound)
@@ -190,7 +205,7 @@ object SemanticAnalyzer {
     generics.map(g => env.map.get(g.ident) match { // 1.
       case Some(typeVal) => // 1.b
         typeVal match {
-          case AdtDefType(_, _, _) =>
+          case AdtType(_, _, _) =>
             if (g.lowerBound.nonEmpty || g.upperBound.nonEmpty) { // 1.b.a
               ERROR(s"Error: <type> $g can not be type-bound")
               reportLine(exp.token)
@@ -210,9 +225,20 @@ object SemanticAnalyzer {
     })
   }
 
+  def checkDerivable(token: Token, typeclassIdent: String, env: Environment): Unit = {
+    if (typeclassIdent != "$None$") {
+      env.typeclasses.get(typeclassIdent) match {
+        case Some(_) =>
+        case _ =>
+          ERROR(s"Error: <typeclass> ${typeclassIdent} does not exist in this scope")
+          reportLine(token)
+      }
+    }
+  }
+
   def eval(rootExp: Exp): Exp = {
     LOG(DEBUG, s"eval: ${rootExp.token}")
-    eval(rootExp, Environment(Map[String, Type](), Map[String, Type]()), UnknownType())
+    eval(rootExp, Environment(Map[String, Type](), Map[String, Type](), Map[String, Type]), UnknownType())
   }
 
   def eval(exp: Exp, env: Environment, expectedType: Type): Exp = {
@@ -258,27 +284,21 @@ object SemanticAnalyzer {
     // 1. Convert each constructor to a constructor type
     // 2. For any ADT, Record, or FuncType references, ensure generics match correctly (pull from env)
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(adt, adtEnvNoGenerics)
-    val adtEnv = addName(adtEnvNoGenerics, adt.ident, AdtDefType(adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
-    val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(c => ConstructorType(c.members))
-    constructorTypes.foreach(_.memberTypes.foreach {
-      case a@AdtDefType(_, _, _) =>
+    val adtEnv = addName(adtEnvNoGenerics, adt.ident, AdtType(adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
+    val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(c =>
+      ConstructorType(c.members)
+    )
+    /*constructorTypes.foreach(_.memberTypes.foreach {
+      case a@AdtType(_, _, _) =>
       case r@RecordType(_, _, _, _, _) =>
       case _ =>
         ERROR(s"Error: Type cannot be specified with generics in <type> constructor")
         reportLine(adt.token)
-    })
-    val afterAdt = eval(adt.afterAdt, addName(env, adt.ident, AdtDefType(adt.ident, genericTypes, constructorTypes)), expectedType)
-    env.map.get(adt.derivedFrom.ident) match {
-      case Some(ident) =>
-        if (???) { // need TypeclassDef
-          ERROR(s"Error: Cannot derive from non-<typeclass> ${adt.derivedFrom.ident}")
-          reportLine(adt.token)
-        }
-      case _ =>
-        ERROR(s"Error: <typeclass> ${adt.derivedFrom.ident} does not exist in this scope")
-        reportLine(adt.token)
-    }
-    Adt(adt.token, adt.ident, genericTypes, )
+    })*/
+    val adtType = AdtType(adt.ident, genericTypes, constructorTypes)
+    checkDerivable(adt.token, adt.derivedFrom.ident, env)
+    val afterAdt = eval(adt.afterAdt, addName(env, adt.ident, adtType), expectedType)
+    Adt(adt.token, adt.ident, adt.generics, adt.derivedFrom, adt.constructors, afterAdt).usingType(adtType)
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {
