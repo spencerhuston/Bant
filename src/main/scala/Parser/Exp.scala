@@ -56,7 +56,7 @@ case class Constructor(members: ArrayBuffer[Type])
 case class Adt(token: Token,
                ident: String,
                generics: ArrayBuffer[Generic],
-               derivedFrom: Ref,
+               derivedFrom: String,
                constructors: ArrayBuffer[Constructor],
                afterAdt: Exp) extends Exp
 case class Member(ident: String, memberType: Type)
@@ -64,16 +64,16 @@ case class Record(token: Token,
                   isSealed: Boolean,
                   ident: String,
                   generics: ArrayBuffer[Generic],
-                  superType: Ref,
-                  derivedFrom: Ref,
+                  superType: String,
+                  derivedFrom: String,
                   members: ArrayBuffer[Member],
                   afterRecord: Exp) extends Exp
-case class Signature(name: Ref, funcType: Type)
+case class Signature(name: String, funcType: Type)
 case class Typeclass(token: Token,
                      isSealed: Boolean,
                      ident: String,
                      generics: ArrayBuffer[Generic],
-                     superclass: Ref,
+                     superclass: String,
                      signatures: ArrayBuffer[Signature],
                      afterTypeclass: Exp) extends Exp
 case class Instance(token: Token,

@@ -1,4 +1,9 @@
-record SuperTest { test: int };
-record Test[T] extends SuperTest {
-    test2: Test[T]
+type None { };
+type Some[T] { T };
+type Option[T] {
+    Some[T] | None
+};
+
+typeclass Test[T] {
+    maybe = T -> Option[T]
 };

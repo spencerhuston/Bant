@@ -26,7 +26,7 @@ object Parser {
 
   def curr: Token = tokenStream(index)
   def advance(): Unit = index += 1
-  def none: NoOp = NoOp(curr)
+  def none: Exp = NoOp(curr).usingType(NullType())
   def inBounds: Boolean = index < tokenStream.length
 
   def isEof: Boolean = {
@@ -379,9 +379,9 @@ object Parser {
 
     val generics = parseGenerics
 
-    var derivedFrom = Ref(curr, "$None$")
+    var derivedFrom = ""
     if (matchOptional(DERIVES)) {
-      derivedFrom = parseRef
+      derivedFrom = matchIdent
     }
 
     matchRequired(LEFT_BRACE)
@@ -399,9 +399,9 @@ object Parser {
     Adt(token, ident, generics, derivedFrom, constructors, parseExp)
   }
 
-  def parseSuperType: Ref = {
-    if (matchOptional(EXTENDS)) parseRef
-    else Ref(curr, "$None$")
+  def parseSuperType: String = {
+    if (matchOptional(EXTENDS)) matchIdent
+    else ""
   }
 
   def parseRecord(isSealed: Boolean): Record = {
@@ -415,9 +415,9 @@ object Parser {
     val generics = parseGenerics
     val superType = parseSuperType
 
-    var derivedFrom = Ref(curr, "$None$")
+    var derivedFrom = ""
     if (matchOptional(DERIVES)) {
-      derivedFrom = parseRef
+      derivedFrom = matchIdent
     }
 
     matchRequired(LEFT_BRACE)
@@ -448,7 +448,7 @@ object Parser {
     matchRequired(LEFT_BRACE)
     val signatures = ArrayBuffer[Signature]()
     while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACE)) {
-      val name = parseRef
+      val name = matchIdent
       matchRequired(ASSIGNMENT)
       val signature = parseType
       signatures += Signature(name, signature)
@@ -891,7 +891,7 @@ object Parser {
         while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
           argTypes += parseType
         matchRequired(RETURN_TYPE)
-        FuncType(argTypes, parseType)
+        FuncType(ArrayBuffer[GenericType](), argTypes, parseType)
       case Ident(ident, _) =>
         advance()
         val generics = ArrayBuffer[Type]()
@@ -916,7 +916,7 @@ object Parser {
     var returnType: Type = UnknownType()
     if (matchOptional(RETURN_TYPE)) {
       returnType = parseType
-      FuncType(ArrayBuffer(expType), returnType)
+      FuncType(ArrayBuffer[GenericType](), ArrayBuffer(expType), returnType)
     } else
       expType
   }

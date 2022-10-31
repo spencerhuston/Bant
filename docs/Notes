@@ -1,11 +1,16 @@
-Current Bugs:
+TODO FIX BUGS:
 - Empty collection on left-side of primitive throws error even if rigth-side and expectedType are known
 - Bad error reporting on primitve type-mismatch
 
-TODO:
-- More type-tagging during parsing phase
-- Bird operator
-- Modules/Imports
+TODO IMPLEMENT:
+- Typeclass "Type" Ref:
+    1. Ident
+    2. Is sealed
+    3. Generics
+    4. Super typeclass
+    5. Function names and signatures
+- Allow for partial function application to non-closure functions,
+    allows currying on functions with 1 parameter set
 
 Other Notes:
 - An adt in a typeclass MUST have implementations of the listed functions with the types defined

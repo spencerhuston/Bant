@@ -1,5 +1,8 @@
 package SemanticAnalyzer
 
+import Lexer.Token
+import Parser.{Generic, Ref, Signature}
+
 import scala.collection.mutable.ArrayBuffer
 
 abstract class Type {
@@ -110,10 +113,27 @@ case class RecordType(ident: String,
       ">"
   }
 }
-case class FuncType(argTypes: ArrayBuffer[Type],
+case class TypeclassRef(isSealed: Boolean,
+                        ident: String,
+                        generics: ArrayBuffer[GenericType],
+                        superclass: String,
+                        signatures: ArrayBuffer[Signature]) extends Type {
+  override def printType(): String = {
+    s"<" + (if (isSealed) "sealed" else "") + s"typeclass $ident" +
+      (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}]") +
+      (if (superclass.isEmpty) "" else s" => $superclass") +
+      (if (signatures.isEmpty) "" else s"(${signatures.map(s => s.name + "=" + s.funcType.printType()).mkString(",")})") +
+      ">"
+  }
+}
+case class FuncType(generics: ArrayBuffer[GenericType],
+                    argTypes: ArrayBuffer[Type],
                     returnType: Type) extends Type {
   override def printType(): String = {
-    s"<func(${TypeUtil.printListType(argTypes)}) -> $returnType>"
+    s"<func " +
+      (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}]") +
+      (if (argTypes.isEmpty) "" else s"(${TypeUtil.printListType(argTypes)})") +
+      s" -> $returnType>"
   }
 }
 
