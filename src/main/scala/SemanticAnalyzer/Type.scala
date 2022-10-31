@@ -101,12 +101,13 @@ case class RecordType(ident: String,
                       isSealed: Boolean,
                       superType: String,
                       generics: ArrayBuffer[GenericType],
-                      fieldNames: ArrayBuffer[String]) extends Type {
+                      fields: Map[String, Type]) extends Type {
   override def printType(): String = {
     s"<record $ident" +
-      (if (superType.isEmpty) "" else s"=> $superType") +
-      s"[${generics.map(_.printType()).mkString(",")}]" +
-      s"(${fieldNames.mkString(",")})>"
+      (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}]") +
+      (if (superType == "$None$") "" else s" => $superType") +
+      (if (fields.isEmpty) "" else s"(${fields.map(m => m._1 + "::" + m._2.printType()).mkString(",")})") +
+      ">"
   }
 }
 case class FuncType(argTypes: ArrayBuffer[Type],

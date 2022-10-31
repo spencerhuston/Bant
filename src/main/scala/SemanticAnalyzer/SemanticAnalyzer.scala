@@ -5,7 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, getValue, logicTyp
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncDef, Generic, Let, ListDef, Lit, Match, NoOp, Prim, Record, Ref, SetDef, TupleDef, Typeclass}
+import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncDef, Generic, Let, ListDef, Lit, Match, Member, NoOp, Prim, Record, Ref, SetDef, TupleDef, Typeclass}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -156,6 +156,36 @@ object SemanticAnalyzer {
     evaluatedExp.usingType(expType)
   }
 
+  def checkDerivable(token: Token, typeclassIdent: String, env: Environment): Unit = {
+    if (typeclassIdent != "$None$") {
+      env.typeclasses.get(typeclassIdent) match {
+        case Some(_) =>
+        case _ =>
+          ERROR(s"Error: <typeclass> $typeclassIdent does not exist in this scope")
+          reportLine(token)
+      }
+    }
+  }
+
+  def checkSuperDerivable(token: Token, superIdent: String, env: Environment): Unit = {
+    if (superIdent != "$None$") {
+      env.map.get(superIdent) match {
+        case Some(superRecord) =>
+          if (!superRecord.isInstanceOf[RecordType]) {
+            ERROR(s"Error: type $superIdent is not a record type")
+            reportLine(token)
+          }
+          else if (superRecord.asInstanceOf[RecordType].isSealed) {
+            ERROR(s"Error: <record> $superIdent is sealed, cannot be extended")
+            reportLine(token)
+          }
+        case _ =>
+          ERROR(s"Error: <record> $superIdent does not exist in this scope")
+          reportLine(token)
+      }
+    }
+  }
+
   def typeCheckGenericParams(exp: Exp, env: Environment): ArrayBuffer[GenericType] = {
     val generics: ArrayBuffer[Generic] = exp match {
       case a@Adt(_, _, _, _, _, _) => a.generics
@@ -225,13 +255,70 @@ object SemanticAnalyzer {
     })
   }
 
-  def checkDerivable(token: Token, typeclassIdent: String, env: Environment): Unit = {
-    if (typeclassIdent != "$None$") {
-      env.typeclasses.get(typeclassIdent) match {
-        case Some(_) =>
+  def deduceUnknownRefType(token: Token, genericTypes: ArrayBuffer[GenericType], unknown: UnknownRefType, env: Environment): Type = {
+    // check all generics in g are unknownRefTypes, nested completely down.
+    // check all unknownRefTypes that arent refs from env are found in genericTypes
+    def genericsAreUnknownRef(generics: ArrayBuffer[Type]): Boolean = {
+      if (generics.nonEmpty)
+        generics.forall(g => g.isInstanceOf[UnknownRefType] && genericsAreUnknownRef(g.asInstanceOf[UnknownRefType].generics))
+      else
+        true
+    }
+
+    def genericTypesAreDefined(generics: ArrayBuffer[Type]): Boolean = {
+      generics.forall(g => {
+        val unknownType = g.asInstanceOf[UnknownRefType]
+        genericTypes.find(gt => gt.ident == unknownType.ident) match {
+          case Some(_) =>
+            genericTypesAreDefined(unknownType.generics)
+          case _ =>
+            ERROR(s"Error: Generic parameter \"${unknownType.ident}\" not defined")
+            reportLine(token)
+            false
+        }
+      })
+    }
+
+    if (!genericsAreUnknownRef(unknown.generics)) {
+      ERROR(s"Error: Literal types disallowed in generic parameter definition")
+      reportLine(token)
+      unknown
+    }
+    else if (!genericTypesAreDefined(unknown.generics))
+      unknown
+    else {
+      env.map.get(unknown.ident) match {
+        case Some(ref) =>
+          ref match {
+            case knownAdt@AdtType(_, adtG, _) =>
+              if (unknown.generics.length == adtG.length)
+                knownAdt
+              else {
+                ERROR(s"Error: Generic parameters for <type> ${unknown.ident} do not match reference")
+                reportLine(token)
+                unknown
+              }
+            case knownRecord@RecordType(_, _, _, recordG, _) =>
+              if (unknown.generics.length == recordG.length)
+                knownRecord
+              else {
+                ERROR(s"Error: Generic parameters for <record> ${unknown.ident} do not match reference")
+                reportLine(token)
+                unknown
+              }
+            case _ =>
+              ERROR(s"Error: Invalid reference to type \"${unknown.ident}\"")
+              reportLine(token)
+              unknown
+          }
         case _ =>
-          ERROR(s"Error: <typeclass> $typeclassIdent does not exist in this scope")
-          reportLine(token)
+          genericTypes.find(gt => gt.ident == unknown.ident) match {
+            case Some(genericType) => genericType
+            case _ =>
+              ERROR(s"Error: Generic parameter \"${unknown.ident}\" not defined")
+              reportLine(token)
+              unknown
+          }
       }
     }
   }
@@ -248,6 +335,7 @@ object SemanticAnalyzer {
       case m@Match(_, _, _) => evalMatch(m, env, expectedType)
       case alias@Alias(_, _, _, _) => evalAlias(alias, env, expectedType)
       case adt@Adt(_, _, _, _, _, _) => evalAdt(adt, env, expectedType)
+      case record@Record(_, _, _, _, _, _, _, _) => evalRecord(record, env, expectedType)
       case let@Let(_, _, _, _, _, _) => evalLet(let, env, expectedType)
       case prim@Prim(_, _, _, _) => evalPrim(prim, env, expectedType)
       case ref@Ref(_, _) =>
@@ -288,55 +376,44 @@ object SemanticAnalyzer {
     val adtEnv = addName(adtEnvNoGenerics, adt.ident, AdtType(adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
     val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(ct =>
       ConstructorType(ct.members.map {
-        case unknown@UnknownRefType(i, g, f) =>
+        case unknown@UnknownRefType(_, _, f) =>
           if (f.nonEmpty) {
             ERROR(s"Error: Cannot deconstruct type in <type> definition")
             reportLine(adt.token)
             unknown
           }
-          // check all generics in g are unknownRefTypes, nested completely down.
-          // check all unknownRefTypes that arent refs from env are found in genericTypes
-          else {
-            adtEnv.map.get(i) match {
-              case Some(ref) =>
-                ref match {
-                  case knownAdt@AdtType(_, adtG, _) =>
-                    if (g.length == adtG.length)
-                      knownAdt
-                    else {
-                      ERROR(s"Error: Generic parameters for <type> $i do not match reference")
-                      reportLine(adt.token)
-                      unknown
-                    }
-                  case knownRecord@RecordType(_, _, _, recordG, _) =>
-                    if (g.length == recordG.length)
-                      knownRecord
-                    else {
-                      ERROR(s"Error: Generic parameters for <record> $i do not match reference")
-                      reportLine(adt.token)
-                      unknown
-                    }
-                  case _ =>
-                    ERROR(s"Error: Invalid reference to type \"$i\"")
-                    reportLine(adt.token)
-                    unknown
-                }
-              case _ =>
-                genericTypes.find(g => g.ident == i) match {
-                  case Some(generic) => generic
-                  case _ =>
-                    ERROR(s"Error: Generic parameter \"$i\" not defined")
-                    reportLine(adt.token)
-                    unknown
-                }
-            }
-          }
+          else
+            deduceUnknownRefType(adt.token, genericTypes, unknown, adtEnv)
         case mt: Type => mt
       })
     )
     val adtType = AdtType(adt.ident, genericTypes, constructorTypes)
     val afterAdt = eval(adt.afterAdt, addName(env, adt.ident, adtType), expectedType)
     Adt(adt.token, adt.ident, adt.generics, adt.derivedFrom, adt.constructors, afterAdt).usingType(adtType)
+  }
+
+  def evalRecord(record: Record, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalRecord: ${record.ident}")
+    val recordEnvNoGenerics = addName(env, record.ident, UnknownType())
+    checkDerivable(record.token, record.derivedFrom.ident, env)
+    val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(record, recordEnvNoGenerics)
+    checkSuperDerivable(record.token, record.superType.ident, env)
+    val recordEnv = addName(recordEnvNoGenerics, record.ident, RecordType(record.ident, record.isSealed, record.superType.ident, genericTypes, Map[String, Type]()))
+    val fields: Map[String, Type] = record.members.map {
+      case Member(ident, unknownRefType: UnknownRefType) =>
+        ident -> deduceUnknownRefType(record.token, genericTypes, unknownRefType, recordEnv)
+      case m => m.ident -> m.memberType
+    }.toMap
+    val recordType = RecordType(record.ident, record.isSealed, record.superType.ident, genericTypes, fields)
+    val afterRecord = eval(record.afterRecord, addName(env, record.ident, recordType), expectedType)
+    Record(record.token,
+      record.isSealed,
+      record.ident,
+      record.generics,
+      record.superType,
+      record.derivedFrom,
+      record.members,
+      afterRecord).usingType(recordType)
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {

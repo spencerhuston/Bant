@@ -1,5 +1,4 @@
-type None { };
-type Some[T, U] { T };
-type Option[T] {
-    Some[T[U], U] | None
+record SuperTest { test: int };
+record Test[T] extends SuperTest {
+    test2: Test[T]
 };

@@ -500,7 +500,7 @@ object Parser {
   }
 
   def parseGenerics: ArrayBuffer[Generic] = {
-    val genericTypes = ArrayBuffer[Generic]()
+    val genericTypes = ArrayBuffer[Generic]() // TODO: FIX FOR RECURSIVE GENERIC TYPES
     if (matchOptional(LEFT_BRACKET)) {
       while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET)) {
         val genericType = matchIdent
