@@ -1,11 +1,12 @@
-type Person { int, string };
+alias Int = int;
+type Person { Int, string };
 
 typeclass Eq[T] {
-    equal = (T, T) -> int
+    equal = (T, T) -> Int
 };
 
 instance Person of Eq {
-    fn equal(p1: Person(age1, name1), p2: Person(age2, name2)) -> int = {
+    fn equal(p1: Person(age1, name1), p2: Person(age2, name2)) -> Int = {
         if (age1 == age2 && name1 == name2) 0 else 1
     };
 };

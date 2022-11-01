@@ -362,35 +362,39 @@ object SemanticAnalyzer {
     else if (!genericTypesAreDefined(unknown.generics))
       unknown
     else {
-      env.map.get(unknown.ident) match {
-        case Some(ref) =>
-          ref match {
-            case knownAdt@AdtType(_, adtG, _) =>
-              if (unknown.generics.length == adtG.length)
-                knownAdt
-              else {
-                ERROR(s"Error: Generic parameters for <type> ${unknown.ident} do not match reference")
-                reportLine(token)
-                unknown
+      env.aliases.get(unknown.ident) match {
+        case Some(aliasType) => aliasType
+        case _ =>
+          env.map.get(unknown.ident) match {
+            case Some(ref) =>
+              ref match {
+                case knownAdt@AdtType(_, adtG, _) =>
+                  if (unknown.generics.length == adtG.length)
+                    knownAdt
+                  else {
+                    ERROR(s"Error: Generic parameters for <type> ${unknown.ident} do not match reference")
+                    reportLine(token)
+                    unknown
+                  }
+                case knownRecord@RecordType(_, _, _, recordG, _) =>
+                  if (unknown.generics.length == recordG.length)
+                    knownRecord
+                  else {
+                    ERROR(s"Error: Generic parameters for <record> ${unknown.ident} do not match reference")
+                    reportLine(token)
+                    unknown
+                  }
+                case generic@GenericType(_, _, _) =>
+                  generic
+                case _ =>
+                  ERROR(s"Error: Invalid reference to type \"${unknown.ident}\"")
+                  reportLine(token)
+                  unknown
               }
-            case knownRecord@RecordType(_, _, _, recordG, _) =>
-              if (unknown.generics.length == recordG.length)
-                knownRecord
-              else {
-                ERROR(s"Error: Generic parameters for <record> ${unknown.ident} do not match reference")
-                reportLine(token)
-                unknown
-              }
-            case generic@GenericType(_, _, _) =>
-              generic
             case _ =>
-              ERROR(s"Error: Invalid reference to type \"${unknown.ident}\"")
-              reportLine(token)
+              reportNoSuchName(token, s"${unknown.ident}")
               unknown
           }
-        case _ =>
-          reportNoSuchName(token, s"${unknown.ident}")
-          unknown
       }
     }
   }
