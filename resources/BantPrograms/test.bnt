@@ -1,12 +1,31 @@
-alias Int = int;
-type Person { Int, string };
-
 typeclass Eq[T] {
-    equal = (T, T) -> Int
+    eq = (T, T) -> bool,
+    neq = (T, T) -> bool
 };
 
-instance Person of Eq {
-    fn equal(p1: Person(age1, name1), p2: Person(age2, name2)) -> Int = {
-        if (age1 == age2 && name1 == name2) 0 else 1
+typeclass Ord[T] extends Eq {
+    gt = (T, T) -> bool,
+    lt = (T, T) -> bool
+};
+
+typeclass Show[T] extends Ord {
+    print = (T) -> null
+};
+
+type Person { int, string };
+
+instance Person of Show {
+    fn test(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {
+        age1 == age2 && name1 == name2
     };
+    fn neq(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {
+        age1 != age2 || name1 != name2
+    };
+    fn gt(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {
+        age1 > age2 && name1 > name2
+    };
+    fn lt(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {
+        age1 < age2 || name1 < name2
+    };
+    fn print(p: Person(age, name)) -> null = null;
 };

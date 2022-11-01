@@ -133,9 +133,9 @@ case class FuncType(generics: ArrayBuffer[GenericType],
                     returnType: Type) extends Type {
   override def printType(): String = {
     s"<func " +
-      (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}]") +
-      (if (argTypes.isEmpty) "" else s"(${TypeUtil.printListType(argTypes)})") +
-      s" -> ${returnType.printType()}>"
+      (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}] ") +
+      (if (argTypes.isEmpty) "() " else s"(${TypeUtil.printListType(argTypes)}) ") +
+      s"-> ${returnType.printType()}>"
   }
 }
 

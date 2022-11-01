@@ -102,6 +102,7 @@ case class FuncDef(token: Token,
 // FuncApp covers:
 // - Function Application
 // - ADT Construction
+// - Record Construction
 // - Collection Access
 case class FuncApp(token: Token,
                    ident: Exp,

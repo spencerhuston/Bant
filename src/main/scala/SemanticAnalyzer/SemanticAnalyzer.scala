@@ -101,6 +101,26 @@ object SemanticAnalyzer {
     }
   }
 
+  def getSuperclassSignatures(typeclass: Typeclass, env: Environment): ArrayBuffer[Signature] = {
+    if (isTypeclassExtendable(typeclass.token, typeclass.superclass, env)) {
+      typeclass.signatures ++
+        getSuperclassSignatures(typeclass.token,
+          getTypeclass(typeclass.token, env, typeclass.superclass).asInstanceOf[TypeclassRef],
+          env)
+    }
+    else
+      typeclass.signatures
+  }
+
+  def getSuperclassSignatures(token: Token, typeclass: TypeclassRef, env: Environment): ArrayBuffer[Signature] = {
+    if (isTypeclassExtendable(token, typeclass.superclass, env)) {
+      typeclass.signatures ++
+        getSuperclassSignatures(token, getTypeclass(token, env, typeclass.superclass).asInstanceOf[TypeclassRef], env)
+    }
+    else
+      typeclass.signatures
+  }
+
   def typeConforms(token: Token, expressionType: Type, expectedType: Type, env: Environment): Type = {
     LOG(DEBUG, s"typeConforms")
 
@@ -217,42 +237,52 @@ object SemanticAnalyzer {
     }
   }
 
-  def checkRecordExtendable(token: Token, superIdent: String, env: Environment): Unit = {
+  def isRecordExtendable(token: Token, superIdent: String, env: Environment): Boolean = {
     if (superIdent.nonEmpty) {
       env.map.get(superIdent) match {
         case Some(superRecord) =>
           if (!superRecord.isInstanceOf[RecordType]) {
             ERROR(s"Error: type $superIdent is not a record type")
             reportLine(token)
+            false
           }
           else if (superRecord.asInstanceOf[RecordType].isSealed) {
             ERROR(s"Error: <record> $superIdent is sealed, cannot be extended")
             reportLine(token)
+            false
           }
+          else true
         case _ =>
           ERROR(s"Error: <record> $superIdent does not exist in this scope")
           reportLine(token)
+          false
       }
     }
+    else false
   }
 
-  def checkTypeclassExtendable(token: Token, superIdent: String, env: Environment): Unit = {
+  def isTypeclassExtendable(token: Token, superIdent: String, env: Environment): Boolean = {
     if (superIdent.nonEmpty) {
       env.typeclasses.get(superIdent) match {
         case Some(superclass) =>
           if (!superclass.isInstanceOf[TypeclassRef]) {
             ERROR(s"Error: $superIdent is not a typeclass")
             reportLine(token)
+            false
           }
           else if (superclass.asInstanceOf[TypeclassRef].isSealed) {
             ERROR(s"Error: <typeclass> $superIdent is sealed, cannot be extended")
             reportLine(token)
+            false
           }
+          else true
         case _ =>
           ERROR(s"Error: <typeclass> $superIdent does not exist in this scope")
           reportLine(token)
+          false
       }
     }
+    else false
   }
 
   def typeCheckGenericParams(exp: Exp, env: Environment): ArrayBuffer[GenericType] = {
@@ -291,14 +321,6 @@ object SemanticAnalyzer {
       }
     }
 
-    // 1. For each generic check if the ident exists in env*
-    // 1.a If it doesn't its a generic placeholder name, put as GenericType in env*
-    // 1.b If it does it's another ADT or a Record or self-reference
-    // 1.b.a If it's an ADT make sure it doesn't have lower and upper bounds
-    // 1.b.b If it's a Record check: it is not sealed if there is a lower type, and upper type is not sealed
-    // 1.b.c If its a self-reference, follow ADT rules
-    // 2. Convert generics to generic types, making sure of all checks
-    // 3. Re-add self-type into env with generics added
     generics.map(g => env.map.get(g.ident) match { // 1.
       case Some(typeVal) => // 1.b
         typeVal match {
@@ -407,7 +429,7 @@ object SemanticAnalyzer {
   def eval(exp: Exp, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"eval: ${exp.token}")
     exp match {
-      case Lit(_, _) => exp
+      case Lit(_, _) => exp.usingType(typeConforms(exp.token, exp.expType, expectedType, env))
       case m@Match(_, _, _) => evalMatch(m, env, expectedType)
       case alias@Alias(_, _, _, _) => evalAlias(alias, env, expectedType)
       case adt@Adt(_, _, _, _, _, _) => evalAdt(adt, env, expectedType)
@@ -475,7 +497,7 @@ object SemanticAnalyzer {
     checkDerivable(record.token, record.derivedFrom, env)
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(record, recordEnvNoGenerics)
     val genericEnv = addGenericsToEnv(genericTypes, recordEnvNoGenerics)
-    checkRecordExtendable(record.token, record.superType, env)
+    isRecordExtendable(record.token, record.superType, env)
     val recordEnv = addName(genericEnv, record.ident, RecordType(record.ident, record.isSealed, record.superType, genericTypes, Map[String, Type]()))
     val fields: Map[String, Type] = record.members.map {
       case Member(ident, unknownRefType: UnknownRefType) =>
@@ -498,8 +520,9 @@ object SemanticAnalyzer {
     LOG(DEBUG, s"evalTypeclass: ${typeclass.ident}")
     val genericTypes: GenericType = typeCheckGenericParams(typeclass, env).head
     val genericEnv = addGenericsToEnv(ArrayBuffer(genericTypes), env)
-    checkTypeclassExtendable(typeclass.token, typeclass.superclass, env)
-    val signatures: ArrayBuffer[Signature] = typeclass.signatures.map(s => {
+    val typeclassSignatures = getSuperclassSignatures(typeclass, genericEnv)
+
+    val signatures: ArrayBuffer[Signature] = typeclassSignatures.map(s => {
       Signature(s.name, {
         if (!s.funcType.isInstanceOf[FuncType]) {
           ERROR(s"Error: Typeclass signature ${s.name} requires function type, not ${s.funcType.printType()}")
