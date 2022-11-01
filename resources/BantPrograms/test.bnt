@@ -1,9 +1,11 @@
-type None { };
-type Some[T] { T };
-type Option[T] {
-    Some[T] | None
+type Person { int, string };
+
+typeclass Eq[T] {
+    equal = (T, T) -> int
 };
 
-typeclass Test[T] {
-    maybe = T -> Option[T]
+instance Person of Eq {
+    fn equal(p1: Person(age1, name1), p2: Person(age2, name2)) -> int = {
+        if (age1 == age2 && name1 == name2) 0 else 1
+    };
 };

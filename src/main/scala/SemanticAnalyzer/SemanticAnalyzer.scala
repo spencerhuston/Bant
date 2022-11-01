@@ -5,7 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, getValue, logicTyp
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncDef, Generic, Let, ListDef, Lit, Match, Member, NoOp, Prim, Record, Ref, SetDef, Signature, TupleDef, Typeclass}
+import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncDef, Generic, Instance, Let, ListDef, Lit, Match, Member, NoOp, Parameter, Prim, Prog, Record, Ref, SetDef, Signature, TupleDef, Typeclass}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -32,6 +32,47 @@ object SemanticAnalyzer {
 
   def addGenericsToEnv(generics: ArrayBuffer[GenericType], env: Environment): Environment = {
     Environment(env.map ++ generics.map(g => g.ident -> g).toMap, env.aliases, env.typeclasses)
+  }
+
+  def addParamsToEnv(params: ArrayBuffer[Parameter], env: Environment): Map[String, Type] = {
+    val paramMap: ArrayBuffer[Map[String, Type]] = params.map(p => {
+      val paramType = deduceParamType(p.token, p.paramType, env)
+      paramType match {
+        case adt@AdtType(ident, g, constructorTypes) =>
+          val adtMap: Map[String, Type] = Map[String, Type](ident -> adt)
+          val unknownRefType = p.paramType.asInstanceOf[UnknownRefType]
+          if (g.nonEmpty) {
+            ERROR(s"Error: Generic constructor parameters disallowed in function parameter definition")
+            reportLine(p.token)
+          }
+          val fieldTypes: Map[String, Type] = constructorTypes.find(c => c.memberTypes.length == unknownRefType.fieldNames.length) match {
+            case Some(ct) =>
+              unknownRefType.fieldNames.zip(ct.memberTypes).map(t => t._1 -> t._2).toMap
+            case _ =>
+              if (unknownRefType.fieldNames.nonEmpty) {
+                ERROR(s"Error: Constructor does not match for <type> $ident")
+                reportLine(p.token)
+              }
+              Map[String, Type]()
+          }
+          adtMap ++ fieldTypes
+        case record@RecordType(ident, _, _, g, fields) =>
+          val recordMap: Map[String, Type] = Map[String, Type](ident -> record)
+          val unknownRefType = p.paramType.asInstanceOf[UnknownRefType]
+          if (g.nonEmpty) {
+            ERROR(s"Error: Generic constructor parameters disallowed in function parameter definition")
+            reportLine(p.token)
+          }
+          else if (unknownRefType.fieldNames.nonEmpty && unknownRefType.fieldNames.length != fields.toList.length) {
+            ERROR(s"Error: Constructor does not match for <record> $ident")
+            reportLine(p.token)
+          }
+          recordMap ++ unknownRefType.fieldNames.zip(fields).map(t => t._1 -> t._2._2).toMap
+        case _ =>
+          Map[String, Type](p.ident -> p.paramType)
+      }
+    })
+    env.map ++ paramMap.foldLeft(Map[String, Type]())(_ ++ _)
   }
 
   def addAlias(env: Environment, name: String, newType: Type): Environment = {
@@ -69,8 +110,10 @@ object SemanticAnalyzer {
       case SetType(st) => SetType(typeWellFormed(st))
       case TupleType(tts) => TupleType(tts.map(typeWellFormed))
       case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
-      case AdtType(_, _, _) => ??? // TODO: Could be ADT or Record
-      //case FuncType(_, _) => ??? // TODO
+      case AdtType(i, g, cs) => AdtType(i, g, cs.map(ct => ConstructorType(ct.memberTypes.map(typeWellFormed))))
+      case RecordType(_, _, _, _, _) => ??? // TODO
+      case FuncType(_, _, _) => ??? // TODO
+      case UnknownRefType(_, _, _) => ??? // TODO
       case UnknownType() =>
         reportTypeUnknown(token)
         t
@@ -95,14 +138,17 @@ object SemanticAnalyzer {
       case (TupleType(lt1), TupleType(lt2)) if lt2.isEmpty => TupleType(listTypeConforms(lt1, lt2))
       case (DictType(t1, t2), DictType(t3, t4)) =>
         DictType(typeConforms(token, t1, t3, env), typeConforms(token, t2, t4, env))
-      case (AdtType(i1, g1, f1), AdtType(i2, g2, f2))
-        if (i1 == i2) && (g1.length == g2.length) && (f1.length == f2.length) &&
-          f1.zip(f2).count(f => f._1 != f._2) == 0 =>
-        AdtType(i1, g1, f1) // TODO: FOR ADT APP
-      case (AdtType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
-      case (t1, AdtType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
-      //case (FuncType(args1, rt1), FuncType(args2, rt2)) if args1.length == args2.length =>
-        //FuncType(listTypeConforms(args1, args2), typeConforms(token, rt1, rt2, env))
+      case (AdtType(i1, g1, f1), AdtType(_, g2, f2))
+        if (g1.length == g2.length) && (f1.length == f2.length) =>
+        val constructorTypes = f1.zip(f2)
+          .map(cs => ConstructorType(cs._1.memberTypes.zip(cs._2.memberTypes)
+            .map(cts => typeConforms(token, cts._1, cts._2, env))))
+        AdtType(i1, g1, constructorTypes)
+      case (UnknownRefType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
+      case (t1, UnknownRefType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
+      //case (FuncType(gen1, args1, rt1), FuncType(gen2, args2, rt2)) if args1.length == args2.length =>
+        // TODO for optional generic parameters at function call site
+        //FuncType(, listTypeConforms(args1, args2), typeConforms(token, rt1, rt2, env))
       case (_, UnknownType()) => typeWellFormed(expressionType)
       case (UnknownType(), _) => typeWellFormed(expectedType)
       case _ =>
@@ -213,15 +259,13 @@ object SemanticAnalyzer {
     val generics: ArrayBuffer[Generic] = exp match {
       case a@Adt(_, _, _, _, _, _) => a.generics
       case r@Record(_, _, _, _, _, _, _, _) => r.generics
-      case t@Typeclass(_, _, _, _, _, _, _) => t.generics
+      case t@Typeclass(_, _, _, _, _, _, _) => ArrayBuffer[Generic](t.parameter)
       case f@FuncDef(_, _, _, _, _, _) => f.generics
       case _ =>
         ERROR(s"Error: Type does not allow generics")
         reportLine(exp.token)
         return ArrayBuffer[GenericType]()
     }
-
-    def genericToType(g: Generic): GenericType = GenericType(g.ident, g.lowerBound, g.upperBound)
 
     def checkBounds(g: Generic): Unit = {
       def reportNotRecordType(bound: String): Unit = {
@@ -263,19 +307,27 @@ object SemanticAnalyzer {
               ERROR(s"Error: <type> $g can not be type-bound")
               reportLine(exp.token)
             }
-            genericToType(g)
+            TypeUtil.genericToType(g)
           case RecordType(recordIdent, isSealed, _, _, _) => // 1.b.b
             if (isSealed && g.lowerBound.nonEmpty) {
               ERROR(s"Error: <record> $recordIdent is sealed, cannot have a lower-bound")
               reportLine(exp.token)
             }
             checkBounds(g)
-            genericToType(g)
+            TypeUtil.genericToType(g)
         }
       case _ => // 1.a
         checkBounds(g)
-        genericToType(g)
+        TypeUtil.genericToType(g)
     })
+  }
+
+  def deduceParamType(token: Token, t: Type, env: Environment): Type = {
+    t match {
+      case unknown@UnknownRefType(_, _, _) => deduceUnknownRefType(token, unknown, env)
+      case GenericType(ident, _, _) => getName(token, env, ident)
+      case _ => t
+    }
   }
 
   def deduceUnknownRefType(token: Token, unknown: UnknownRefType, env: Environment): Type = {
@@ -357,10 +409,11 @@ object SemanticAnalyzer {
       case adt@Adt(_, _, _, _, _, _) => evalAdt(adt, env, expectedType)
       case record@Record(_, _, _, _, _, _, _, _) => evalRecord(record, env, expectedType)
       case typeclass@Typeclass(_, _, _, _, _, _, _) => evalTypeclass(typeclass, env, expectedType)
+      case instance@Instance(_, _, _, _, _) => evalInstance(instance, env, expectedType)
+      case prog@Prog(_, _, _) => evalProg(prog, env, expectedType)
       case let@Let(_, _, _, _, _, _) => evalLet(let, env, expectedType)
       case prim@Prim(_, _, _, _) => evalPrim(prim, env, expectedType)
-      case ref@Ref(_, _) =>
-        ref.usingType(typeConforms(ref.token, getName(ref.token, env, ref.ident), expectedType, env))
+      case ref@Ref(_, _) => ref.usingType(typeConforms(ref.token, getName(ref.token, env, ref.ident), expectedType, env))
       case branch@Branch(_, _, _, _) => evalBranch(branch, env, expectedType)
       case list@ListDef(_, _) => evalListDef(list, env, expectedType)
       case array@ArrayDef(_, _) => evalArrayDef(array, env, expectedType)
@@ -439,8 +492,8 @@ object SemanticAnalyzer {
 
   def evalTypeclass(typeclass: Typeclass, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalTypeclass: ${typeclass.ident}")
-    val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(typeclass, env)
-    val genericEnv = addGenericsToEnv(genericTypes, env)
+    val genericTypes: GenericType = typeCheckGenericParams(typeclass, env).head
+    val genericEnv = addGenericsToEnv(ArrayBuffer(genericTypes), env)
     checkTypeclassExtendable(typeclass.token, typeclass.superclass, env)
     val signatures: ArrayBuffer[Signature] = typeclass.signatures.map(s => {
       Signature(s.name, {
@@ -473,10 +526,80 @@ object SemanticAnalyzer {
     Typeclass(typeclass.token,
       typeclass.isSealed,
       typeclass.ident,
-      typeclass.generics,
+      typeclass.parameter,
       typeclass.superclass,
       signatures,
-      afterTypeclass)
+      afterTypeclass).usingType(typeclassRef)
+  }
+
+  def evalInstance(instance: Instance, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalInstance: ${instance.instanceTypeIdent}")
+    val instanceType = getName(instance.token, env, instance.instanceTypeIdent)
+    if (!instanceType.isInstanceOf[AdtType] && !instanceType.isInstanceOf[RecordType]) {
+      ERROR(s"Error: Invalid typeclass parameter ${instance.instanceTypeIdent}, requires <type> or <record>")
+      reportLine(instance.token)
+      instance
+    }
+    else {
+      val typeclassType = getTypeclass(instance.token, env, instance.typeclassIdent)
+      if (!typeclassType.isInstanceOf[TypeclassRef]) {
+        ERROR(s"Error: Reference ${instance.typeclassIdent} is not a typeclass")
+        reportLine(instance.token)
+        instance
+      }
+      else {
+        val typeclassRef = typeclassType.asInstanceOf[TypeclassRef]
+        val genericResolvedEnv = addName(env, typeclassRef.parameter.ident, instanceType)
+
+        typeclassRef.signatures.foreach(s => {
+          val sigFuncType = s.funcType.asInstanceOf[FuncType]
+          instance.funcs.find(f => {
+            s.name == f.ident &&
+              sigFuncType.argTypes.length == f.params.length
+          }) match {
+            case Some(funcDef) =>
+              funcDef.params.map(_.paramType).zip(sigFuncType.argTypes)
+                .foreach(t => {
+                  typeConforms(funcDef.token,
+                    deduceParamType(funcDef.token, t._1, genericResolvedEnv),
+                    deduceParamType(funcDef.token, t._2, genericResolvedEnv),
+                    genericResolvedEnv)
+                })
+              typeConforms(funcDef.token,
+                deduceParamType(funcDef.token, funcDef.returnType, genericResolvedEnv),
+                deduceParamType(funcDef.token, sigFuncType.returnType, genericResolvedEnv),
+                genericResolvedEnv)
+            case None =>
+              ERROR(s"Error: No matching function for signature ${s.name}")
+              reportLine(instance.token)
+          }
+        })
+        instance.funcs.foreach(f => {
+          val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), env)
+          val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ addParamsToEnv(f.params, funcEnvWithGenerics), env.aliases, env.typeclasses)
+          eval(f.body, funcEnvWithGenericsAndParams, f.returnType)
+        })
+        val envWithInstanceFuncs = Environment(env.map ++ instance.funcs.map(f => f.ident -> f.expType).toMap, env.aliases, env.typeclasses)
+        val afterInstance = eval(instance.afterInstance, envWithInstanceFuncs, expectedType)
+        Instance(instance.token,
+          instance.instanceTypeIdent,
+          instance.typeclassIdent,
+          instance.funcs,
+          afterInstance).usingType(afterInstance.expType)
+      }
+    }
+  }
+
+  def evalProg(prog: Prog, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalProg: ${prog.token.tokenText}")
+    val funcEnv = Environment(env.map ++ prog.funcs.map(f => f.ident -> f.expType).toMap, env.aliases, env.typeclasses)
+    prog.funcs.foreach(f => {
+      val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), funcEnv)
+      val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ f.params.map(p => p.ident -> p.paramType).toMap, env.aliases, env.typeclasses)
+      eval(f.body, funcEnvWithGenericsAndParams, f.returnType)
+    })
+    val afterProg = eval(prog.afterProg, funcEnv, expectedType)
+    Prog(prog.token, prog.funcs, afterProg).usingType(afterProg.expType)
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {

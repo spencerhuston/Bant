@@ -442,7 +442,19 @@ object Parser {
     val typeclassIdent = matchIdent
     requireUppercaseStart(typeclassIdent, "<typeclass>")
 
-    val genericTypes = parseGenerics
+    matchRequired(LEFT_BRACKET)
+    val genericType = matchIdent
+    var lowerBoundType = ""
+    var upperBoundType = ""
+
+    if (matchOptional(LOWER_BOUND)) {
+      lowerBoundType = matchIdent
+    }
+    if (matchOptional(UPPER_BOUND)) {
+      upperBoundType = matchIdent
+    }
+    matchRequired(RIGHT_BRACKET)
+    val parameter = Generic(genericType, lowerBoundType, upperBoundType)
     val superclass = parseSuperType
 
     matchRequired(LEFT_BRACE)
@@ -455,7 +467,7 @@ object Parser {
     }
     matchStatementEndRequired()
 
-    Typeclass(token, isSealed, typeclassIdent, genericTypes, superclass, signatures, parseExp)
+    Typeclass(token, isSealed, typeclassIdent, parameter, superclass, signatures, parseExp)
   }
 
   def parseSealed: Exp = {
@@ -475,18 +487,18 @@ object Parser {
     LOG(DEBUG, s"parseInstance: $curr")
     val token = curr
     matchRequired(INSTANCE)
-    val adtIdent = parseRef
+    val instanceTypeIdent = matchIdent
     matchRequired(OF)
-    val typeclassIdent = parseRef
+    val typeclassIdent = matchIdent
 
     matchRequired(LEFT_BRACE)
     val funcs = ArrayBuffer[FuncDef]()
     while (matchOptional(FN)) {
-      funcs += parseFunDef
+      funcs += parseFuncDef
     }
     matchRequired(RIGHT_BRACE)
     matchStatementEndRequired()
-    Instance(token, adtIdent, typeclassIdent, funcs, parseExp)
+    Instance(token, instanceTypeIdent, typeclassIdent, funcs, parseExp)
   }
 
   def parseProg: Prog = {
@@ -494,7 +506,7 @@ object Parser {
     val token = curr
     val funcs = ArrayBuffer[FuncDef]()
     while (matchOptional(FN)) {
-      funcs += parseFunDef
+      funcs += parseFuncDef
     }
     Prog(token, funcs, parseExp)
   }
@@ -544,7 +556,7 @@ object Parser {
     }
   }
 
-  def parseFunDef: FuncDef = {
+  def parseFuncDef: FuncDef = {
     LOG(DEBUG, s"parseFunDef: $curr")
 
     val token = curr
@@ -564,7 +576,8 @@ object Parser {
     val body = parseSimpleExp
     matchStatementEndRequired()
 
-    FuncDef(token, ident, genericTypes, params, returnType, body)
+    val funcType = FuncType(genericTypes.map(TypeUtil.genericToType), params.map(p => p.paramType), returnType)
+    FuncDef(token, ident, genericTypes, params, returnType, body).usingType(funcType).asInstanceOf[FuncDef]
   }
 
   def parseLambda: Prog = {

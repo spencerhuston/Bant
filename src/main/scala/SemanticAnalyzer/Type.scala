@@ -26,6 +26,8 @@ object TypeUtil {
       case _ => false
     }
   }
+
+  def genericToType(g: Generic): GenericType = GenericType(g.ident, g.lowerBound, g.upperBound)
 }
 
 // Primitives
@@ -115,12 +117,12 @@ case class RecordType(ident: String,
 }
 case class TypeclassRef(isSealed: Boolean,
                         ident: String,
-                        generics: ArrayBuffer[GenericType],
+                        parameter: GenericType,
                         superclass: String,
                         signatures: ArrayBuffer[Signature]) extends Type {
   override def printType(): String = {
     s"<" + (if (isSealed) "sealed" else "") + s"typeclass $ident" +
-      (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}]") +
+      parameter.printType() +
       (if (superclass.isEmpty) "" else s" => $superclass") +
       (if (signatures.isEmpty) "" else s"(${signatures.map(s => s.name + "=" + s.funcType.printType()).mkString(",")})") +
       ">"
@@ -133,7 +135,7 @@ case class FuncType(generics: ArrayBuffer[GenericType],
     s"<func " +
       (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}]") +
       (if (argTypes.isEmpty) "" else s"(${TypeUtil.printListType(argTypes)})") +
-      s" -> $returnType>"
+      s" -> ${returnType.printType()}>"
   }
 }
 

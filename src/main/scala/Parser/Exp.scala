@@ -72,13 +72,13 @@ case class Signature(name: String, funcType: Type)
 case class Typeclass(token: Token,
                      isSealed: Boolean,
                      ident: String,
-                     generics: ArrayBuffer[Generic],
+                     parameter: Generic,
                      superclass: String,
                      signatures: ArrayBuffer[Signature],
                      afterTypeclass: Exp) extends Exp
 case class Instance(token: Token,
-                    adt: Ref,
-                    typeclassIdent: Ref,
+                    instanceTypeIdent: String,
+                    typeclassIdent: String,
                     funcs: ArrayBuffer[FuncDef],
                     afterInstance: Exp) extends Exp
 
@@ -90,7 +90,7 @@ case class Generic(ident: String, lowerBound: String, upperBound: String)
 case class Parameter(token: Token,
                      ident: String,
                      paramType: Type,
-                     default: Exp) extends Exp
+                     default: Exp)
 case class FuncDef(token: Token,
                    ident: String,
                    generics: ArrayBuffer[Generic],

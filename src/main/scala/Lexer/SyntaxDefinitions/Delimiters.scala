@@ -70,6 +70,7 @@ object Delimiters extends Enumeration {
   val FUNC_CHAIN: Delimiters.Value = Value("|>")
   val FUNC_COMP: Delimiters.Value = Value("@")
   val LAMBDA: Delimiters.Value = Value("|")
+  val SINGLE_AMPERSAND: Delimiters.Value = Value("&")
 
   def getValue(str: String): Option[Delimiters.Value] = {
     values.find(_.toString == str) match {
