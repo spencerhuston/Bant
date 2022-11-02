@@ -103,7 +103,7 @@ case class FuncDef(token: Token,
 // - Function Application
 // - ADT Construction
 // - Record Construction
-// - Collection Access
+// - Collection Access not including Tuple
 case class FuncApp(token: Token,
                    ident: Exp,
                    genericParameters: ArrayBuffer[Type],

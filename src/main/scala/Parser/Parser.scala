@@ -579,7 +579,7 @@ object Parser {
     val body = parseSimpleExp
     matchStatementEndRequired()
 
-    val funcType = FuncType(genericTypes.map(TypeUtil.genericToType), params.map(p => p.paramType), returnType, SemanticAnalyzer.emptyEnv)
+    val funcType = FuncType(genericTypes.map(TypeUtil.genericToType), params.map(p => p.paramType), returnType, SemanticAnalyzer.emptyEnv, body)
     FuncDef(token, ident, genericTypes, params, returnType, body).usingType(funcType).asInstanceOf[FuncDef]
   }
 
@@ -908,7 +908,7 @@ object Parser {
         while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
           argTypes += parseType
         matchRequired(RETURN_TYPE)
-        FuncType(ArrayBuffer[GenericType](), argTypes, parseType, SemanticAnalyzer.emptyEnv)
+        FuncType(ArrayBuffer[GenericType](), argTypes, parseType, SemanticAnalyzer.emptyEnv, none)
       case Ident(ident, _) =>
         advance()
         val generics = ArrayBuffer[Type]()
@@ -933,7 +933,7 @@ object Parser {
     var returnType: Type = UnknownType()
     if (matchOptional(RETURN_TYPE)) {
       returnType = parseType
-      FuncType(ArrayBuffer[GenericType](), ArrayBuffer(expType), returnType, SemanticAnalyzer.emptyEnv)
+      FuncType(ArrayBuffer[GenericType](), ArrayBuffer(expType), returnType, SemanticAnalyzer.emptyEnv, none)
     } else
       expType
   }

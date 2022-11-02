@@ -1,6 +1,6 @@
 package SemanticAnalyzer
 
-import Parser.{Generic, Signature}
+import Parser.{Exp, Generic, Signature}
 import SemanticAnalyzer.Environment
 
 import scala.collection.mutable.ArrayBuffer
@@ -99,7 +99,6 @@ case class AdtType(ident: String,
             .mkString(","))
           .mkString("|")})"
       else "") + ">"
-
   }
 }
 case class RecordType(ident: String,
@@ -131,7 +130,8 @@ case class TypeclassRef(isSealed: Boolean,
 case class FuncType(generics: ArrayBuffer[GenericType],
                     argTypes: ArrayBuffer[Type],
                     returnType: Type,
-                    env: Environment) extends Type {
+                    env: Environment,
+                    body: Exp) extends Type {
   override def printType(): String = {
     s"<func " +
       (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}] ") +

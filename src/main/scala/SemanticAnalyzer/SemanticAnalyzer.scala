@@ -5,6 +5,7 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, getValue, logicTyp
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
+import Parser.Parser.none
 import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncApp, FuncDef, Generic, Instance, IntVal, Let, ListDef, Lit, Match, Member, NoOp, Parameter, Prim, Prog, Record, RecordAccess, Ref, SetDef, Signature, TupleAccess, TupleDef, Typeclass}
 
 import scala.annotation.tailrec
@@ -139,7 +140,7 @@ object SemanticAnalyzer {
       case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
       case AdtType(i, g, cs) => AdtType(i, g, cs.map(ct => ConstructorType(ct.memberTypes.map(typeWellFormed))))
       case RecordType(_, _, _, _, _) => ??? // TODO
-      case FuncType(_, _, _, _) => ??? // TODO
+      case FuncType(_, _, _, _, _) => ??? // TODO
       case UnknownRefType(_, _, _) => ??? // TODO
       case UnknownType() =>
         reportTypeUnknown(token)
@@ -460,7 +461,7 @@ object SemanticAnalyzer {
       case typeclass@Typeclass(_, _, _, _, _, _, _) => evalTypeclass(typeclass, env, expectedType)
       case instance@Instance(_, _, _, _, _) => evalInstance(instance, env, expectedType)
       case prog@Prog(_, _, _) => evalProg(prog, env, expectedType)
-      case funcApp@FuncApp(_, _, _, _) => ???
+      case funcApp@FuncApp(_, _, _, _) => evalFuncApp(funcApp, env, expectedType)
       case tupleAccess@TupleAccess(_, _, _) => evalTupleAccess(tupleAccess, env, expectedType)
       case recordAccess@RecordAccess(_, _, _) => evalRecordAccess(recordAccess, env, expectedType)
       case let@Let(_, _, _, _, _, _) => evalLet(let, env, expectedType)
@@ -570,7 +571,7 @@ object SemanticAnalyzer {
               case t: Type => t
             }
           }
-          FuncType(funcType.generics, funcType.argTypes.map { deduceArgType }, deduceArgType(funcType.returnType), emptyEnv)
+          FuncType(funcType.generics, funcType.argTypes.map { deduceArgType }, deduceArgType(funcType.returnType), emptyEnv, none)
         }
       })
     })
@@ -663,6 +664,75 @@ object SemanticAnalyzer {
     })
     val afterProg = eval(prog.afterProg, funcEnv, expectedType)
     Prog(prog.token, prog.funcs, afterProg).usingType(afterProg.expType)
+  }
+
+  def evalCollectionApp(arguments: ArrayBuffer[Exp], env: Environment): ArrayBuffer[Exp] = {
+    LOG(DEBUG, s"evalCollectionApp")
+    arguments.map(a => eval(a, env, IntType()))
+  }
+
+  // TODO
+  def evalFuncApp(funcApp: FuncApp, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalFuncApp: ${funcApp.token.tokenText}")
+    // 1. Recursively check ident until exp type is ref (unknown ref type)
+    //
+    // 2. If func type:
+    // 2.a.a Add generic idents with matching generic parameter types
+    // 2.a.b If generics are expected but not provided, add them as UnknownType and let
+    //        it deduce the type from the arguments
+    // 2.b Check arg length matches field count
+    // 2.b.a If it doesnt check for default params. If none, throw error
+    //          If they do exist, match each arg up to expected type as usual and then
+    //          insert them and left over defaults into env
+    // 2.b.b If it does, check each arg against the expected type
+    // 2.c Add all args into func env and eval body with expected return type
+    // 2.d Return the func return type
+    //
+    // 3. If ADT type:
+    // 3.a.a Add generic idents with matching generic parameter types
+    // 3.a.b If generics are expected but not provided, add them as UnknownType and let
+    //        it deduce the type from the arguments
+    // 3.b Get list of constructors with same field count as arg count
+    // 3.c Find first one that matches arg types pair-wise
+    // 3.d Return adt type with no generics and single matching constructor type
+    //
+    // 4. If record type:
+    // 4.a.a Add generic idents with matching generic parameter types
+    // 4.a.b If generics are expected but not provided, add them as UnknownType and let
+    //        it deduce the type from the arguments
+    // 4.b Check arg length matches field count
+    // 4.c Check each type matches field types pair-wise
+    // 4.c Return record type
+    //
+    // 5. If collection type:
+    // 5.a If list/array/set:
+    // 5.a.a Check argument type resolves to IntType
+    // 5.a.b Return collection element type
+    // 5.b.a Check argument type resolves to keyType
+    // 5.b.b Return dict value type
+    //
+    // 6. Return type and repeat steps on parent calls until completely out of call stack
+    funcApp.ident match {
+      case ref@Ref(_, _) =>
+        val refType = getName(funcApp.token, env, ref.ident)
+        refType match {
+          case list@ListType(_) => evalCollectionApp(funcApp.arguments, env)
+          case array@ArrayType(_) => evalCollectionApp(funcApp.arguments, env)
+          case set@SetType(_) => evalCollectionApp(funcApp.arguments, env)
+          case dict@DictType(keyType, valueType) => ???
+          case adt@AdtType(ident, generics, constructorTypes) => ???
+          case record@RecordType(ident, isSealed, superType, generics, fields) => ???
+          case func@FuncType(generics, argTypes, returnType, env, body) => ???
+          case _ =>
+            ERROR(s"Error: Invalid reference in application")
+            reportLine(funcApp.token)
+        }
+      case fa@FuncApp(token, ident, genericParameters, arguments) => ???
+      case _ =>
+        ERROR(s"Error: Invalid reference in application")
+        reportLine(funcApp.token)
+    }
+    ???
   }
 
   def evalTupleAccess(ta: TupleAccess, env: Environment, expectedType: Type): Exp = {

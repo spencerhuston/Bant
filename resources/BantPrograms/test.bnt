@@ -1,2 +1,2 @@
-val t: Tuple[Tuple[int, Tuple[List[bool], Set[string]]], char] = Tuple { };
-t.0.1.1
+fn f(x: int) -> bool = false;
+f(5)
