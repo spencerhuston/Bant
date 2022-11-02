@@ -15,7 +15,7 @@ typeclass Show[T] extends Ord {
 type Person { int, string };
 
 instance Person of Show {
-    fn test(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {
+    fn eq(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {
         age1 == age2 && name1 == name2
     };
     fn neq(p1: Person(age1, name1), p2: Person(age2, name2)) -> bool = {

@@ -3,12 +3,6 @@ TODO FIX BUGS:
 - Bad error reporting on primitve type-mismatch
 
 TODO IMPLEMENT:
-- Typeclass "Type" Ref:
-    1. Ident
-    2. Is sealed
-    3. Generics
-    4. Super typeclass
-    5. Function names and signatures
 - Allow for partial function application to non-closure functions,
     allows currying on functions with 1 parameter set
 

@@ -1,7 +1,7 @@
 package SemanticAnalyzer
 
-import Lexer.Token
-import Parser.{Generic, Ref, Signature}
+import Parser.{Generic, Signature}
+import SemanticAnalyzer.Environment
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -130,7 +130,8 @@ case class TypeclassRef(isSealed: Boolean,
 }
 case class FuncType(generics: ArrayBuffer[GenericType],
                     argTypes: ArrayBuffer[Type],
-                    returnType: Type) extends Type {
+                    returnType: Type,
+                    env: Environment) extends Type {
   override def printType(): String = {
     s"<func " +
       (if (generics.isEmpty) "" else s"[${generics.map(_.printType()).mkString(",")}] ") +

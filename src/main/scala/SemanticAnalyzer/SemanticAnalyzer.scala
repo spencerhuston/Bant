@@ -17,6 +17,12 @@ object SemanticAnalyzer {
                          aliases: Map[String, Type],
                          typeclasses: Map[String, Type])
 
+  def emptyEnv: Environment = {
+    Environment(Map[String, Type](),
+      Map[String, Type](),
+      Map[String, Type]())
+  }
+
   def addName(env: Environment, name: String, newType: Type): Environment = {
     Environment(env.map + (name -> newType), env.aliases, env.typeclasses)
   }
@@ -132,7 +138,7 @@ object SemanticAnalyzer {
       case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
       case AdtType(i, g, cs) => AdtType(i, g, cs.map(ct => ConstructorType(ct.memberTypes.map(typeWellFormed))))
       case RecordType(_, _, _, _, _) => ??? // TODO
-      case FuncType(_, _, _) => ??? // TODO
+      case FuncType(_, _, _, _) => ??? // TODO
       case UnknownRefType(_, _, _) => ??? // TODO
       case UnknownType() =>
         reportTypeUnknown(token)
@@ -352,6 +358,22 @@ object SemanticAnalyzer {
     }
   }
 
+  def typeCheckDefaultParams(params: ArrayBuffer[Parameter]): Unit = {
+    params.takeRight(params.zip(List.range(0, params.length)).find(p => p._1.default match {
+      case NoOp(_) => false
+      case _ => true
+    }) match {
+      case Some(funcIndex) => params.length - funcIndex._2
+      case _ => 0
+    }).foreach(p => p.default match {
+      case NoOp(_) =>
+        ERROR(s"Error: Ambiguous function parameter(s).\n" +
+          s"${" " * "Error: ".length}Function parameter \"${p.ident}\" requires default value or position shifted to before default parameters")
+        reportLine(p.token)
+      case _ =>
+    })
+  }
+
   def deduceUnknownRefType(token: Token, unknown: UnknownRefType, env: Environment): Type = {
     // check all types are UnknownRefTypes in UnknownRefType generics
     // check all UnknownRefTypes that arent refs from env are found in genericTypes
@@ -544,7 +566,7 @@ object SemanticAnalyzer {
               case t: Type => t
             }
           }
-          FuncType(funcType.generics, funcType.argTypes.map { deduceArgType }, deduceArgType(funcType.returnType))
+          FuncType(funcType.generics, funcType.argTypes.map { deduceArgType }, deduceArgType(funcType.returnType), emptyEnv)
         }
       })
     })
@@ -604,6 +626,7 @@ object SemanticAnalyzer {
         instance.funcs.foreach(f => {
           val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), env)
           val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ addParamsToEnv(f.params, funcEnvWithGenerics), env.aliases, env.typeclasses)
+          typeCheckDefaultParams(f.params)
           eval(f.body, funcEnvWithGenericsAndParams, f.returnType)
         })
         val envWithInstanceFuncs = Environment(env.map ++ instance.funcs.map(f => f.ident -> f.expType).toMap, env.aliases, env.typeclasses)
@@ -623,6 +646,11 @@ object SemanticAnalyzer {
     prog.funcs.foreach(f => {
       val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), funcEnv)
       val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ f.params.map(p => p.ident -> p.paramType).toMap, env.aliases, env.typeclasses)
+      typeCheckDefaultParams(f.params)
+      f.params.foreach(p => p.default match {
+        case NoOp(_) =>
+        case _ => eval(p.default, env, p.paramType)
+      })
       eval(f.body, funcEnvWithGenericsAndParams, f.returnType)
     })
     val afterProg = eval(prog.afterProg, funcEnv, expectedType)

@@ -512,13 +512,16 @@ object Parser {
   }
 
   def parseGenerics: ArrayBuffer[Generic] = {
-    val genericTypes = ArrayBuffer[Generic]() // TODO: FIX FOR RECURSIVE GENERIC TYPES
+    val genericTypes = ArrayBuffer[Generic]()
     if (matchOptional(LEFT_BRACKET)) {
       while (matchOptional(COMMA) || !matchOptional(RIGHT_BRACKET)) {
         val genericType = matchIdent
         var lowerBoundType = ""
         var upperBoundType = ""
 
+        if (matchOptional(LEFT_BRACKET)) {
+          reportBadMatch(curr, ":> or <: or ]", "Higher-kinded types are not yet supported")
+        }
         if (matchOptional(LOWER_BOUND)) {
           lowerBoundType = matchIdent
         }
@@ -576,7 +579,7 @@ object Parser {
     val body = parseSimpleExp
     matchStatementEndRequired()
 
-    val funcType = FuncType(genericTypes.map(TypeUtil.genericToType), params.map(p => p.paramType), returnType)
+    val funcType = FuncType(genericTypes.map(TypeUtil.genericToType), params.map(p => p.paramType), returnType, SemanticAnalyzer.emptyEnv)
     FuncDef(token, ident, genericTypes, params, returnType, body).usingType(funcType).asInstanceOf[FuncDef]
   }
 
@@ -904,7 +907,7 @@ object Parser {
         while (matchOptional(COMMA) || !matchOptional(RIGHT_PAREN))
           argTypes += parseType
         matchRequired(RETURN_TYPE)
-        FuncType(ArrayBuffer[GenericType](), argTypes, parseType)
+        FuncType(ArrayBuffer[GenericType](), argTypes, parseType, SemanticAnalyzer.emptyEnv)
       case Ident(ident, _) =>
         advance()
         val generics = ArrayBuffer[Type]()
@@ -929,7 +932,7 @@ object Parser {
     var returnType: Type = UnknownType()
     if (matchOptional(RETURN_TYPE)) {
       returnType = parseType
-      FuncType(ArrayBuffer[GenericType](), ArrayBuffer(expType), returnType)
+      FuncType(ArrayBuffer[GenericType](), ArrayBuffer(expType), returnType, SemanticAnalyzer.emptyEnv)
     } else
       expType
   }
