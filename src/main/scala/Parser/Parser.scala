@@ -766,7 +766,7 @@ object Parser {
   def parseTupleAccessIndex: IntVal = {
     LOG(DEBUG, s"parseTupleAccessIndex: $curr")
     val accessIndex = parseLit
-    if (!accessIndex.isInstanceOf[Lit] && !accessIndex.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
+    if (!accessIndex.isInstanceOf[Lit] || !accessIndex.asInstanceOf[Lit].value.isInstanceOf[IntVal]) {
       reportBadMatch(curr, "<IntVal>", "Tuple access requires integer literal")
       IntVal(-1)
     }
@@ -794,13 +794,14 @@ object Parser {
       case Ident(_, _) =>
         val ref = parseRef
         if (matchOptional(TUPLE_ACCESS)) {
+          val token = curr
           val accessIndex = parseTupleAccessIndex
-          var tupleAccess = TupleAccess(curr, ref, accessIndex)
+          val accessIndices = ArrayBuffer[IntVal](accessIndex)
 
           while (matchOptional(TUPLE_ACCESS)) {
-            tupleAccess = TupleAccess(curr, tupleAccess, parseTupleAccessIndex)
+            accessIndices += parseTupleAccessIndex
           }
-          tupleAccess
+          TupleAccess(token, ref, accessIndices)
         }
         else if (matchOptional(RECORD_ACCESS)) {
           val fieldIdent = matchIdent

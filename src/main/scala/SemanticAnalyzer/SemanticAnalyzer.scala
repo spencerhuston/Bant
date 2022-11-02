@@ -5,8 +5,9 @@ import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, getValue, logicTyp
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
-import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncDef, Generic, Instance, Let, ListDef, Lit, Match, Member, NoOp, Parameter, Prim, Prog, Record, Ref, SetDef, Signature, TupleDef, Typeclass}
+import Parser.{Adt, Alias, ArrayDef, Branch, DictDef, Exp, FuncApp, FuncDef, Generic, Instance, IntVal, Let, ListDef, Lit, Match, Member, NoOp, Parameter, Prim, Prog, Record, RecordAccess, Ref, SetDef, Signature, TupleAccess, TupleDef, Typeclass}
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 object SemanticAnalyzer {
@@ -459,6 +460,9 @@ object SemanticAnalyzer {
       case typeclass@Typeclass(_, _, _, _, _, _, _) => evalTypeclass(typeclass, env, expectedType)
       case instance@Instance(_, _, _, _, _) => evalInstance(instance, env, expectedType)
       case prog@Prog(_, _, _) => evalProg(prog, env, expectedType)
+      case funcApp@FuncApp(_, _, _, _) => ???
+      case tupleAccess@TupleAccess(_, _, _) => evalTupleAccess(tupleAccess, env, expectedType)
+      case recordAccess@RecordAccess(_, _, _) => evalRecordAccess(recordAccess, env, expectedType)
       case let@Let(_, _, _, _, _, _) => evalLet(let, env, expectedType)
       case prim@Prim(_, _, _, _) => evalPrim(prim, env, expectedType)
       case ref@Ref(_, _) => ref.usingType(typeConforms(ref.token, getName(ref.token, env, ref.ident), expectedType, env))
@@ -627,6 +631,10 @@ object SemanticAnalyzer {
           val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), env)
           val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ addParamsToEnv(f.params, funcEnvWithGenerics), env.aliases, env.typeclasses)
           typeCheckDefaultParams(f.params)
+          f.params.foreach(p => p.default match {
+            case NoOp(_) =>
+            case _ => eval(p.default, env, p.paramType)
+          })
           eval(f.body, funcEnvWithGenericsAndParams, f.returnType)
         })
         val envWithInstanceFuncs = Environment(env.map ++ instance.funcs.map(f => f.ident -> f.expType).toMap, env.aliases, env.typeclasses)
@@ -655,6 +663,47 @@ object SemanticAnalyzer {
     })
     val afterProg = eval(prog.afterProg, funcEnv, expectedType)
     Prog(prog.token, prog.funcs, afterProg).usingType(afterProg.expType)
+  }
+
+  def evalTupleAccess(ta: TupleAccess, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalTupleAccess: ${ta.token}")
+    val tupleType = getName(ta.token, env, ta.ref.ident)
+    if (!tupleType.isInstanceOf[TupleType]) {
+      ERROR(s"Error: ${ta.ref.ident} is not of type <tuple>")
+      reportLine(ta.token)
+      ta
+    }
+    else {
+      @tailrec
+      def tupleIndexMatches(t: TupleType, accessIndices: ArrayBuffer[IntVal], index: Int = 0): Type = {
+        if (index > accessIndices.length) {
+          ERROR(s"Error: More indices than nested tuples for <tuple> ${ta.ref.ident}")
+          reportLine(ta.token)
+          t
+        }
+        else if (accessIndices(index).value < 0 || accessIndices(index).value >= t.tupleTypes.length) {
+          ERROR(s"Error: Invalid index for ${accessIndices(index).value} <tuple> ${ta.ref.ident}")
+          reportLine(ta.token)
+          t
+        }
+        else {
+          t.tupleTypes(accessIndices(index).value) match {
+            case tt@TupleType(_) => tupleIndexMatches(tt, accessIndices, index + 1)
+            case otherType@_ => otherType
+          }
+        }
+      }
+      val tupleAccessType = tupleIndexMatches(tupleType.asInstanceOf[TupleType], ta.accessIndices)
+      TupleAccess(ta.token,
+        ta.ref,
+        ta.accessIndices).usingType(typeConforms(ta.token, tupleAccessType, expectedType, env))
+    }
+  }
+
+  def evalRecordAccess(ra: RecordAccess, env: Environment, expectedType: Type): Exp = {
+    LOG(DEBUG, s"evalRecordAccess: ${ra.recordIdent}")
+    // TODO
+    ???
   }
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {

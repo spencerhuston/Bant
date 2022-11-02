@@ -109,8 +109,8 @@ case class FuncApp(token: Token,
                    genericParameters: ArrayBuffer[Type],
                    arguments: ArrayBuffer[Exp]) extends Exp
 case class TupleAccess(token: Token,
-                       ref: Exp,
-                       accessIndex: IntVal) extends Exp
+                       ref: Ref,
+                       accessIndices: ArrayBuffer[IntVal]) extends Exp
 case class RecordAccess(token: Token,
                         recordIdent: Ref,
                         fieldIdent: String) extends Exp
