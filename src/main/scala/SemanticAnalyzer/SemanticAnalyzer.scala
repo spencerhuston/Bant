@@ -666,9 +666,20 @@ object SemanticAnalyzer {
     Prog(prog.token, prog.funcs, afterProg).usingType(afterProg.expType)
   }
 
-  def evalCollectionApp(arguments: ArrayBuffer[Exp], env: Environment): ArrayBuffer[Exp] = {
-    LOG(DEBUG, s"evalCollectionApp")
-    arguments.map(a => eval(a, env, IntType()))
+  def evalCollectionApp(argType: Type, typedIdent: Exp, funcApp: FuncApp, env: Environment): Exp = {
+    LOG(DEBUG, s"evalCollectionApp: ${funcApp.token.tokenText}")
+    if (funcApp.arguments.length != 1) {
+      ERROR(s"Error: Collection application requires exactly 1 <int> type")
+      reportLine(funcApp.token)
+      funcApp
+    }
+    else {
+      val arg = eval(funcApp.arguments.head, env, argType)
+      FuncApp(funcApp.token,
+        typedIdent,
+        funcApp.genericParameters,
+        ArrayBuffer(arg))
+    }
   }
 
   // TODO
@@ -712,27 +723,21 @@ object SemanticAnalyzer {
     // 5.b.b Return dict value type
     //
     // 6. Return type and repeat steps on parent calls until completely out of call stack
-    funcApp.ident match {
-      case ref@Ref(_, _) =>
-        val refType = getName(funcApp.token, env, ref.ident)
-        refType match {
-          case list@ListType(_) => evalCollectionApp(funcApp.arguments, env)
-          case array@ArrayType(_) => evalCollectionApp(funcApp.arguments, env)
-          case set@SetType(_) => evalCollectionApp(funcApp.arguments, env)
-          case dict@DictType(keyType, valueType) => ???
-          case adt@AdtType(ident, generics, constructorTypes) => ???
-          case record@RecordType(ident, isSealed, superType, generics, fields) => ???
-          case func@FuncType(generics, argTypes, returnType, env, body) => ???
-          case _ =>
-            ERROR(s"Error: Invalid reference in application")
-            reportLine(funcApp.token)
-        }
-      case fa@FuncApp(token, ident, genericParameters, arguments) => ???
+    val typedIdent = eval(funcApp.ident, env, UnknownType())
+    typedIdent.expType match {
+      case ListType(listType) =>
+        evalCollectionApp(IntType(), typedIdent, funcApp, env).usingType(listType)
+      case ArrayType(arrayType) =>
+        evalCollectionApp(IntType(), typedIdent, funcApp, env).usingType(arrayType)
+      case SetType(setType) =>
+        evalCollectionApp(IntType(), typedIdent, funcApp, env).usingType(setType)
+      case DictType(kt, vt) =>
+        evalCollectionApp(kt, typedIdent, funcApp, env).usingType(vt)
       case _ =>
-        ERROR(s"Error: Invalid reference in application")
+        ERROR(s"Error: Invalid application type")
         reportLine(funcApp.token)
+        funcApp
     }
-    ???
   }
 
   def evalTupleAccess(ta: TupleAccess, env: Environment, expectedType: Type): Exp = {
