@@ -1,3 +1,4 @@
-type Test { List[int], int };
-val t = Test(List{2}, 5);
-fn f(t: Test(a, b)) -> List[int] = a;
+record Test1 { c: char };
+record Test { t: Test1, i: int };
+val t = Test(Test1('c'), 5);
+t

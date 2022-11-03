@@ -157,7 +157,8 @@ object SemanticAnalyzer {
       case AdtType(inst, i, g, cs) =>
         AdtType(inst, i, g, cs.map(ct =>
           ConstructorType(ct.memberTypes.map(typeWellFormed))))
-      case RecordType(_, _, _, _, _, _) => ??? // TODO
+      case RecordType(inst, i, s, st, g, f) =>
+        RecordType(inst, i, s, st, g, f.toList.map(t => t._1 -> typeWellFormed(t._2)).toMap)
       case FuncType(_, _, _, _, _) => ??? // TODO
       case UnknownRefType(_, _, _) => ??? // TODO
       case UnknownType() =>
@@ -535,6 +536,7 @@ object SemanticAnalyzer {
     Adt(adt.token, adt.ident, adt.generics, adt.derivedFrom, adt.constructors, afterAdt).usingType(adtType)
   }
 
+  // TODO: Add supertype's fields to new type
   def evalRecord(record: Record, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalRecord: ${record.ident}")
     val recordEnvNoGenerics = addName(record.token, env, record.ident, UnknownType())
@@ -699,6 +701,7 @@ object SemanticAnalyzer {
     }
   }
 
+  // TODO: Add generic checks and inference
   def evalAdtConstructor(funcApp: FuncApp, typedIdent: Ref, adt: AdtType, env: Environment): Exp = {
     LOG(DEBUG, s"evalAdtConstructor: ${typedIdent.ident}")
     if (adt.instantiated) {
@@ -731,6 +734,7 @@ object SemanticAnalyzer {
     }
   }
 
+  // TODO: Finish. Add generic checks and inference
   def evalRecordConstructor(funcApp: FuncApp, typedIdent: Ref, record: RecordType, env: Environment): Exp = {
     LOG(DEBUG, s"evalAdtConstructor: ${}")
     if (record.instantiated) {
@@ -744,15 +748,14 @@ object SemanticAnalyzer {
       funcApp.usingType(typedIdent.expType)
     }
     else if ((record.generics.length == funcApp.genericParameters.length) || funcApp.genericParameters.isEmpty) {
-      /*val fields = record.fields.toList.zip(funcApp.arguments)
+      val typedArgs = record.fields.toList.zip(funcApp.arguments)
         .map(mt => {eval(mt._2, env, mt._1._2)})
-      val fieldTypes = ???
       val rt = RecordType(instantiated=true,
         record.ident, record.isSealed, record.superType, record.generics, record.fields)
       FuncApp(funcApp.token,
         typedIdent,
         funcApp.genericParameters,
-        ArrayBuffer(fields)).usingType(rt)*/
+        typedArgs.to(ArrayBuffer)).usingType(rt)
       funcApp.usingType(typedIdent.expType)
     }
     else {
@@ -762,7 +765,7 @@ object SemanticAnalyzer {
     }
   }
 
-  // TODO: In-Progress
+  // TODO: Records, Functions
   def evalFuncApp(funcApp: FuncApp, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalFuncApp: ${funcApp.token.tokenText}")
     // 1. Recursively check ident until exp type is ref (unknown ref type)
