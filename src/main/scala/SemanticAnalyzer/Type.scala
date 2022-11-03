@@ -87,11 +87,13 @@ case class GenericType(ident: String, lowerBound: String, upperBound: String) ex
   }
 }
 case class ConstructorType(memberTypes: ArrayBuffer[Type])
-case class AdtType(ident: String,
+case class AdtType(instantiated: Boolean,
+                   ident: String,
                    generics: ArrayBuffer[GenericType],
                    constructorTypes: ArrayBuffer[ConstructorType]) extends Type {
   override def printType(): String = {
     s"<type $ident" +
+      (if (instantiated) " inst! " else "")
       (if (generics.nonEmpty) s"[${generics.map(_.printType()).mkString(",")}]" else "") +
       (if (constructorTypes.nonEmpty)
         s"(${constructorTypes.map(c =>
@@ -101,7 +103,8 @@ case class AdtType(ident: String,
       else "") + ">"
   }
 }
-case class RecordType(ident: String,
+case class RecordType(instantiated: Boolean,
+                      ident: String,
                       isSealed: Boolean,
                       superType: String,
                       generics: ArrayBuffer[GenericType],

@@ -1,7 +1,7 @@
 package SemanticAnalyzer
 
 import Lexer.SyntaxDefinitions.Delimiters
-import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, getValue, logicTypes, looseComparisonTypes, plusTypes, strictComparisonTypes}
+import Lexer.SyntaxDefinitions.Delimiters.{arithTypesNotPlus, logicTypes, looseComparisonTypes, plusTypes, strictComparisonTypes}
 import Lexer.Token
 import Logger.Level.DEBUG
 import Logger.Logger.{ERROR, LOG, WARN, lineList}
@@ -25,8 +25,15 @@ object SemanticAnalyzer {
       Map[String, Type]())
   }
 
-  def addName(env: Environment, name: String, newType: Type): Environment = {
-    Environment(env.map + (name -> newType), env.aliases, env.typeclasses)
+  def addName(token: Token, env: Environment, name: String, newType: Type): Environment = {
+    env.map.get(name) match {
+      case Some(_) =>
+        ERROR(s"Error: Identifier $name already exists in this scope")
+        reportLine(token)
+        env
+      case _ =>
+        Environment(env.map + (name -> newType), env.aliases, env.typeclasses)
+    }
   }
 
   def getName(token: Token, env: Environment, name: String): Type = {
@@ -46,7 +53,7 @@ object SemanticAnalyzer {
     val paramMap: ArrayBuffer[Map[String, Type]] = params.map(p => {
       val paramType = deduceParamType(p.token, p.paramType, env)
       paramType match {
-        case adt@AdtType(ident, g, constructorTypes) =>
+        case adt@AdtType(_, ident, g, constructorTypes) =>
           val adtMap: Map[String, Type] = Map[String, Type](ident -> adt)
           val unknownRefType = p.paramType.asInstanceOf[UnknownRefType]
           if (g.nonEmpty) {
@@ -64,7 +71,7 @@ object SemanticAnalyzer {
               Map[String, Type]()
           }
           adtMap ++ fieldTypes
-        case record@RecordType(ident, _, _, g, fields) =>
+        case record@RecordType(_, ident, _, _, g, fields) =>
           val recordMap: Map[String, Type] = Map[String, Type](ident -> record)
           val unknownRefType = p.paramType.asInstanceOf[UnknownRefType]
           if (g.nonEmpty) {
@@ -129,7 +136,7 @@ object SemanticAnalyzer {
       typeclass.signatures
   }
 
-  def typeConforms(token: Token, expressionType: Type, expectedType: Type, env: Environment): Type = {
+  def typeConforms(token: Token, expressionType: Type, expectedType: Type, env: Environment, suppressError: Boolean = false): Type = {
     LOG(DEBUG, s"typeConforms")
 
     def typeWellFormed(t: Type): Type = t match {
@@ -138,12 +145,15 @@ object SemanticAnalyzer {
       case SetType(st) => SetType(typeWellFormed(st))
       case TupleType(tts) => TupleType(tts.map(typeWellFormed))
       case DictType(kt, vt) => DictType(typeWellFormed(kt), typeWellFormed(vt))
-      case AdtType(i, g, cs) => AdtType(i, g, cs.map(ct => ConstructorType(ct.memberTypes.map(typeWellFormed))))
-      case RecordType(_, _, _, _, _) => ??? // TODO
+      case AdtType(inst, i, g, cs) =>
+        AdtType(inst, i, g, cs.map(ct =>
+          ConstructorType(ct.memberTypes.map(typeWellFormed))))
+      case RecordType(_, _, _, _, _, _) => ??? // TODO
       case FuncType(_, _, _, _, _) => ??? // TODO
       case UnknownRefType(_, _, _) => ??? // TODO
       case UnknownType() =>
-        reportTypeUnknown(token)
+        if (!suppressError)
+          reportTypeUnknown(token)
         t
       case _ => t
     }
@@ -154,10 +164,7 @@ object SemanticAnalyzer {
     }
 
     (expressionType, expectedType) match {
-      case (_, _) if expressionType == expectedType =>
-        if (expressionType == UnknownType())
-          reportTypeUnknown(token)
-        typeWellFormed(expressionType)
+      case (_, _) if expressionType == expectedType => typeWellFormed(expressionType)
       case (ListType(t1), ListType(t2)) => ListType(typeConforms(token, t1, t2, env))
       case (ArrayType(t1), ArrayType(t2)) => ArrayType(typeConforms(token, t1, t2, env))
       case (SetType(t1), SetType(t2)) => SetType(typeConforms(token, t1, t2, env))
@@ -166,12 +173,12 @@ object SemanticAnalyzer {
       case (TupleType(lt1), TupleType(lt2)) if lt2.isEmpty => TupleType(listTypeConforms(lt1, lt2))
       case (DictType(t1, t2), DictType(t3, t4)) =>
         DictType(typeConforms(token, t1, t3, env), typeConforms(token, t2, t4, env))
-      case (AdtType(i1, g1, f1), AdtType(_, g2, f2))
-        if (g1.length == g2.length) && (f1.length == f2.length) =>
-        val constructorTypes = f1.zip(f2)
+      case (AdtType(inst1, i1, g1, ct1), AdtType(_, _, g2, ct2))
+        if (g1.length == g2.length) && (ct1.length == ct2.length) =>
+        val constructorTypes = ct1.zip(ct2)
           .map(cs => ConstructorType(cs._1.memberTypes.zip(cs._2.memberTypes)
             .map(cts => typeConforms(token, cts._1, cts._2, env))))
-        AdtType(i1, g1, constructorTypes)
+        AdtType(inst1, i1, g1, constructorTypes)
       case (UnknownRefType(i, _, _), t2) => typeConforms(token, getAlias(token, env, i), t2, env)
       case (t1, UnknownRefType(i, _, _)) => typeConforms(token, t1, getAlias(token, env, i), env)
       //case (FuncType(gen1, args1, rt1), FuncType(gen2, args2, rt2)) if args1.length == args2.length =>
@@ -180,8 +187,9 @@ object SemanticAnalyzer {
       case (_, UnknownType()) => typeWellFormed(expressionType)
       case (UnknownType(), _) => typeWellFormed(expectedType)
       case _ =>
-        reportTypeMismatch(token, expressionType, expectedType)
-        expressionType
+        if (!suppressError)
+          reportTypeMismatch(token, expressionType, expectedType)
+        UnknownType()
     }
   }
 
@@ -332,13 +340,13 @@ object SemanticAnalyzer {
     generics.map(g => env.map.get(g.ident) match { // 1.
       case Some(typeVal) => // 1.b
         typeVal match {
-          case AdtType(_, _, _) =>
+          case AdtType(_, _, _, _) =>
             if (g.lowerBound.nonEmpty || g.upperBound.nonEmpty) { // 1.b.a
               ERROR(s"Error: <type> $g can not be type-bound")
               reportLine(exp.token)
             }
             TypeUtil.genericToType(g)
-          case RecordType(recordIdent, isSealed, _, _, _) => // 1.b.b
+          case RecordType(_, recordIdent, isSealed, _, _, _) => // 1.b.b
             if (isSealed && g.lowerBound.nonEmpty) {
               ERROR(s"Error: <record> $recordIdent is sealed, cannot have a lower-bound")
               reportLine(exp.token)
@@ -414,7 +422,7 @@ object SemanticAnalyzer {
           env.map.get(unknown.ident) match {
             case Some(ref) =>
               ref match {
-                case knownAdt@AdtType(_, adtG, _) =>
+                case knownAdt@AdtType(_, _, adtG, _) =>
                   if (unknown.generics.length == adtG.length)
                     knownAdt
                   else {
@@ -422,7 +430,7 @@ object SemanticAnalyzer {
                     reportLine(token)
                     unknown
                   }
-                case knownRecord@RecordType(_, _, _, recordG, _) =>
+                case knownRecord@RecordType(_, _, _, _, recordG, _) =>
                   if (unknown.generics.length == recordG.length)
                     knownRecord
                   else {
@@ -495,11 +503,11 @@ object SemanticAnalyzer {
 
   def evalAdt(adt: Adt, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalAdt: ${adt.ident}")
-    val adtEnvNoGenerics = addName(env, adt.ident, UnknownType())
+    val adtEnvNoGenerics = addName(adt.token, env, adt.ident, UnknownType())
     checkDerivable(adt.token, adt.derivedFrom, env)
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(adt, adtEnvNoGenerics)
     val genericEnv = addGenericsToEnv(genericTypes, adtEnvNoGenerics)
-    val adtEnv = addName(genericEnv, adt.ident, AdtType(adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
+    val adtEnv = addName(adt.token, genericEnv, adt.ident, AdtType(instantiated=false, adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
     val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(ct =>
       ConstructorType(ct.members.map {
         case unknown@UnknownRefType(_, _, f) =>
@@ -513,26 +521,26 @@ object SemanticAnalyzer {
         case mt: Type => mt
       })
     )
-    val adtType = AdtType(adt.ident, genericTypes, constructorTypes)
-    val afterAdt = eval(adt.afterAdt, addName(env, adt.ident, adtType), expectedType)
+    val adtType = AdtType(instantiated=false, adt.ident, genericTypes, constructorTypes)
+    val afterAdt = eval(adt.afterAdt, addName(adt.token, env, adt.ident, adtType), expectedType)
     Adt(adt.token, adt.ident, adt.generics, adt.derivedFrom, adt.constructors, afterAdt).usingType(adtType)
   }
 
   def evalRecord(record: Record, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalRecord: ${record.ident}")
-    val recordEnvNoGenerics = addName(env, record.ident, UnknownType())
+    val recordEnvNoGenerics = addName(record.token, env, record.ident, UnknownType())
     checkDerivable(record.token, record.derivedFrom, env)
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(record, recordEnvNoGenerics)
     val genericEnv = addGenericsToEnv(genericTypes, recordEnvNoGenerics)
     isRecordExtendable(record.token, record.superType, env)
-    val recordEnv = addName(genericEnv, record.ident, RecordType(record.ident, record.isSealed, record.superType, genericTypes, Map[String, Type]()))
+    val recordEnv = addName(record.token, genericEnv, record.ident, RecordType(instantiated=false, record.ident, record.isSealed, record.superType, genericTypes, Map[String, Type]()))
     val fields: Map[String, Type] = record.members.map {
       case Member(ident, unknownRefType: UnknownRefType) =>
         ident -> deduceUnknownRefType(record.token, unknownRefType, recordEnv)
       case m => m.ident -> m.memberType
     }.toMap
-    val recordType = RecordType(record.ident, record.isSealed, record.superType, genericTypes, fields)
-    val afterRecord = eval(record.afterRecord, addName(env, record.ident, recordType), expectedType)
+    val recordType = RecordType(instantiated=false, record.ident, record.isSealed, record.superType, genericTypes, fields)
+    val afterRecord = eval(record.afterRecord, addName(record.token, env, record.ident, recordType), expectedType)
     Record(record.token,
       record.isSealed,
       record.ident,
@@ -603,7 +611,7 @@ object SemanticAnalyzer {
       }
       else {
         val typeclassRef = typeclassType.asInstanceOf[TypeclassRef]
-        val genericResolvedEnv = addName(env, typeclassRef.parameter.ident, instanceType)
+        val genericResolvedEnv = addName(instance.token, env, typeclassRef.parameter.ident, instanceType)
 
         typeclassRef.signatures.foreach(s => {
           val sigFuncType = s.funcType.asInstanceOf[FuncType]
@@ -630,7 +638,7 @@ object SemanticAnalyzer {
         })
         instance.funcs.foreach(f => {
           val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), env)
-          val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ addParamsToEnv(f.params, funcEnvWithGenerics), env.aliases, env.typeclasses)
+          val funcEnvWithGenericsAndParams = Environment(addParamsToEnv(f.params, funcEnvWithGenerics), env.aliases, env.typeclasses)
           typeCheckDefaultParams(f.params)
           f.params.foreach(p => p.default match {
             case NoOp(_) =>
@@ -654,7 +662,7 @@ object SemanticAnalyzer {
     val funcEnv = Environment(env.map ++ prog.funcs.map(f => f.ident -> f.expType).toMap, env.aliases, env.typeclasses)
     prog.funcs.foreach(f => {
       val funcEnvWithGenerics = addGenericsToEnv(f.generics.map(TypeUtil.genericToType), funcEnv)
-      val funcEnvWithGenericsAndParams = Environment(funcEnvWithGenerics.map ++ f.params.map(p => p.ident -> p.paramType).toMap, env.aliases, env.typeclasses)
+      val funcEnvWithGenericsAndParams = Environment(addParamsToEnv(f.params, funcEnvWithGenerics), env.aliases, env.typeclasses)
       typeCheckDefaultParams(f.params)
       f.params.foreach(p => p.default match {
         case NoOp(_) =>
@@ -682,7 +690,70 @@ object SemanticAnalyzer {
     }
   }
 
-  // TODO
+  def evalAdtConstructor(funcApp: FuncApp, typedIdent: Ref, adt: AdtType, env: Environment): Exp = {
+    LOG(DEBUG, s"evalAdtConstructor: ${typedIdent.ident}")
+    if (adt.instantiated) {
+      ERROR(s"Error: Instance of <type> ${typedIdent.ident} has already been created, cannot perform application on it again")
+      reportLine(funcApp.token)
+      funcApp.usingType(typedIdent.expType)
+    }
+    else if ((adt.generics.length == funcApp.genericParameters.length) || funcApp.genericParameters.isEmpty) {
+      val ct = adt.constructorTypes.filter(ct => ct.memberTypes.length == funcApp.arguments.length)
+        .find(ct => ct.memberTypes.zip(funcApp.arguments).forall(mt => {
+          val arg = eval(mt._2, env, UnknownType())
+          typeConforms(arg.token, arg.expType, mt._1, env, suppressError = true) != UnknownType()
+        })) match {
+        case Some(ct) => ct
+        case _ =>
+          ERROR(s"Error: Application for <type> ${typedIdent.ident} does not match any of its constructors")
+          reportLine(funcApp.token)
+          ConstructorType(ArrayBuffer[Type]())
+      }
+      val typedArgs = ct.memberTypes.zip(funcApp.arguments).map(mt => eval(mt._2, env, mt._1))
+      FuncApp(funcApp.token,
+        typedIdent,
+        funcApp.genericParameters,
+        typedArgs).usingType(AdtType(instantiated=true, adt.ident, adt.generics, ArrayBuffer(ct)))
+    }
+    else {
+      ERROR(s"Error: <type> ${typedIdent.ident} constructor has invalid generic parameters")
+      reportLine(funcApp.token)
+      funcApp.usingType(typedIdent.expType)
+    }
+  }
+
+  def evalRecordConstructor(funcApp: FuncApp, typedIdent: Ref, record: RecordType, env: Environment): Exp = {
+    LOG(DEBUG, s"evalAdtConstructor: ${}")
+    if (record.instantiated) {
+      ERROR(s"Error: Instance of <record> ${typedIdent.ident} has already been created, cannot perform application on it again")
+      reportLine(funcApp.token)
+      funcApp.usingType(typedIdent.expType)
+    }
+    else if (record.fields.toList.length != funcApp.arguments.length) {
+      ERROR(s"Error: Application for <record> ${typedIdent.ident} does not match its constructor")
+      reportLine(funcApp.token)
+      funcApp.usingType(typedIdent.expType)
+    }
+    else if ((record.generics.length == funcApp.genericParameters.length) || funcApp.genericParameters.isEmpty) {
+      /*val fields = record.fields.toList.zip(funcApp.arguments)
+        .map(mt => {eval(mt._2, env, mt._1._2)})
+      val fieldTypes = ???
+      val rt = RecordType(instantiated=true,
+        record.ident, record.isSealed, record.superType, record.generics, record.fields)
+      FuncApp(funcApp.token,
+        typedIdent,
+        funcApp.genericParameters,
+        ArrayBuffer(fields)).usingType(rt)*/
+      funcApp.usingType(typedIdent.expType)
+    }
+    else {
+      ERROR(s"Error: <type> ${typedIdent.ident} constructor has invalid generic parameters")
+      reportLine(funcApp.token)
+      funcApp.usingType(typedIdent.expType)
+    }
+  }
+
+  // TODO: In-Progress
   def evalFuncApp(funcApp: FuncApp, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalFuncApp: ${funcApp.token.tokenText}")
     // 1. Recursively check ident until exp type is ref (unknown ref type)
@@ -733,10 +804,14 @@ object SemanticAnalyzer {
         evalCollectionApp(IntType(), typedIdent, funcApp, env).usingType(setType)
       case DictType(kt, vt) =>
         evalCollectionApp(kt, typedIdent, funcApp, env).usingType(vt)
+      case adt@AdtType(_, _, _, _) if funcApp.ident.isInstanceOf[Ref] => // ensure construction only
+        evalAdtConstructor(funcApp, typedIdent.asInstanceOf[Ref], adt, env)
+      case record@RecordType(_, _, _, _, _, _) if funcApp.ident.isInstanceOf[Ref] => // ensure construction only
+        evalRecordConstructor(funcApp, typedIdent.asInstanceOf[Ref], record, env)
       case _ =>
         ERROR(s"Error: Invalid application type")
         reportLine(funcApp.token)
-        funcApp
+        funcApp.usingType(typedIdent.expType)
     }
   }
 
@@ -783,8 +858,8 @@ object SemanticAnalyzer {
 
   def evalLet(let: Let, env: Environment, expectedType: Type): Exp = {
     LOG(DEBUG, s"evalLet: ${let.ident}")
-    val letValue = typeCheck(let.expValue, env, let.letType)
-    val body = typeCheck(let.afterLet, addName(env, let.ident, letValue.expType), expectedType)
+    val letValue = eval(let.expValue, env, let.letType)
+    val body = eval(let.afterLet, addName(let.token, env, let.ident, letValue.expType), expectedType)
     Let(let.token, let.isLazy, let.ident, letValue.expType, letValue, body).usingType(body.expType)
   }
 
