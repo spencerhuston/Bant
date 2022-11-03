@@ -93,7 +93,7 @@ case class AdtType(instantiated: Boolean,
                    constructorTypes: ArrayBuffer[ConstructorType]) extends Type {
   override def printType(): String = {
     s"<type $ident" +
-      (if (instantiated) " inst! " else "")
+      (if (instantiated) " inst! " else "") +
       (if (generics.nonEmpty) s"[${generics.map(_.printType()).mkString(",")}]" else "") +
       (if (constructorTypes.nonEmpty)
         s"(${constructorTypes.map(c =>

@@ -36,6 +36,15 @@ object SemanticAnalyzer {
     }
   }
 
+  def overwriteName(env: Environment, name: String, newType: Type): Environment = {
+    env.map.get(name) match {
+      case Some(_) =>
+        Environment(env.map - name + (name -> newType), env.aliases, env.typeclasses)
+      case _ =>
+        Environment(env.map + (name -> newType), env.aliases, env.typeclasses)
+    }
+  }
+
   def getName(token: Token, env: Environment, name: String): Type = {
     env.map.get(name) match {
       case s@Some(_) => s.value
@@ -507,7 +516,7 @@ object SemanticAnalyzer {
     checkDerivable(adt.token, adt.derivedFrom, env)
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(adt, adtEnvNoGenerics)
     val genericEnv = addGenericsToEnv(genericTypes, adtEnvNoGenerics)
-    val adtEnv = addName(adt.token, genericEnv, adt.ident, AdtType(instantiated=false, adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
+    val adtEnv = overwriteName(genericEnv, adt.ident, AdtType(instantiated=false, adt.ident, genericTypes, ArrayBuffer[ConstructorType]()))
     val constructorTypes: ArrayBuffer[ConstructorType] = adt.constructors.map(ct =>
       ConstructorType(ct.members.map {
         case unknown@UnknownRefType(_, _, f) =>
@@ -533,7 +542,7 @@ object SemanticAnalyzer {
     val genericTypes: ArrayBuffer[GenericType] = typeCheckGenericParams(record, recordEnvNoGenerics)
     val genericEnv = addGenericsToEnv(genericTypes, recordEnvNoGenerics)
     isRecordExtendable(record.token, record.superType, env)
-    val recordEnv = addName(record.token, genericEnv, record.ident, RecordType(instantiated=false, record.ident, record.isSealed, record.superType, genericTypes, Map[String, Type]()))
+    val recordEnv = overwriteName(genericEnv, record.ident, RecordType(instantiated=false, record.ident, record.isSealed, record.superType, genericTypes, Map[String, Type]()))
     val fields: Map[String, Type] = record.members.map {
       case Member(ident, unknownRefType: UnknownRefType) =>
         ident -> deduceUnknownRefType(record.token, unknownRefType, recordEnv)

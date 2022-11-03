@@ -1,6 +1,9 @@
 TODO FIX BUGS:
 - Empty collection on left-side of primitive throws error even if rigth-side and expectedType are known
 - Bad error reporting on primitve type-mismatch
+- Fix how params and generics are added to env
+- Check record names dont overlap
+- Implement way to have function overloading?
 
 TODO IMPLEMENT:
 - Allow for partial function application to non-closure functions,
